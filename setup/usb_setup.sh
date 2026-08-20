@@ -167,27 +167,11 @@ echo "Building Alpine apkovl overlay..."
 "$PROJECT_DIR/setup/build_apkovl.sh" "$MOUNT_POINT/$APKOVL_NAME" "$PROJECT_DIR" \
     || die "failed to build apkovl"
 
-# Step 10: Write GRUB configuration
+# Step 10: Write GRUB configuration (base entries + ISO boot entries)
 echo "Writing GRUB configuration..."
 mkdir -p "$MOUNT_POINT/boot/grub"
-cat > "$MOUNT_POINT/boot/grub/grub.cfg" <<'GRUB'
-set timeout=10
-set default=0
-
-set alpine_repo="http://dl-cdn.alpinelinux.org/alpine/latest-stable/main,http://dl-cdn.alpinelinux.org/alpine/latest-stable/community"
-
-menuentry 'OSFinder TUI' {
-    search --no-floppy --set=root --file /boot/vmlinuz-lts
-    linux /boot/vmlinuz-lts ip=dhcp alpine_repo="$alpine_repo" quiet
-    initrd /boot/initramfs-lts
-}
-
-menuentry 'OSFinder TUI (verbose)' {
-    search --no-floppy --set=root --file /boot/vmlinuz-lts
-    linux /boot/vmlinuz-lts ip=dhcp alpine_repo="$alpine_repo"
-    initrd /boot/initramfs-lts
-}
-GRUB
+sh "$PROJECT_DIR/setup/gen_grub_cfg.sh" "$PROJECT_DIR" > "$MOUNT_POINT/boot/grub/grub.cfg" \
+    || die "failed to generate grub.cfg"
 
 # Step 11: Install GRUB for BIOS and UEFI
 echo "Installing GRUB (BIOS + UEFI)..."

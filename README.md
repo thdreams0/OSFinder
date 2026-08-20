@@ -68,7 +68,8 @@ Alpine Linux loads into RAM and the menu appears automatically. That's it.
 - Pick a result by number. The ISO downloads with a progress bar.
 - After the download, choose what to do next:
   1. **Mount the ISO and open the installer** — run the OS installer right away;
-  2. **Copy the ISO to the pen** — save it for later or for another machine;
+  2. **Copy the ISO to the pen** — save it for later or for another machine; on the
+     next boot the GRUB menu boots it directly (Ventoy-style);
   3. **Search another OS**.
 
 ## Requirements

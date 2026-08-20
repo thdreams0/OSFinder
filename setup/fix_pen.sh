@@ -22,7 +22,6 @@ fi
 USB_DEVICE="$1"
 MOUNT_POINT="/tmp/osfinder_fix_mount"
 PROJECT_DIR=$(cd "$(dirname "$0")/.." && pwd)
-REPO_URLS="http://dl-cdn.alpinelinux.org/alpine/latest-stable/main,http://dl-cdn.alpinelinux.org/alpine/latest-stable/community"
 
 partition_path() {
     local dev="$1" num="$2" base
@@ -89,13 +88,13 @@ echo "Rebuilding apkovl overlay..."
 "$PROJECT_DIR/setup/build_apkovl.sh" "$MOUNT_POINT/alpine.apkovl.tar.gz" "$PROJECT_DIR" \
     || die "failed to rebuild apkovl"
 
-# --- 2. Fix grub.cfg alpine_repo ---
-echo "Fixing grub.cfg (alpine_repo)..."
-if [ -f "$MOUNT_POINT/boot/grub/grub.cfg" ]; then
-    sed -i "s|alpine_repo=auto|alpine_repo=\"$REPO_URLS\"|g" "$MOUNT_POINT/boot/grub/grub.cfg"
-    grep -q 'alpine_repo=' "$MOUNT_POINT/boot/grub/grub.cfg" || \
-        die "grub.cfg has no alpine_repo entry - please re-run the installer"
-fi
+# --- 2. Regenerate grub.cfg (alpine_repo fix + ISO boot entries) ---
+echo "Regenerating grub.cfg (alpine_repo + ISO boot entries)..."
+mkdir -p "$MOUNT_POINT/boot/grub"
+sh "$PROJECT_DIR/setup/gen_grub_cfg.sh" "$PROJECT_DIR" > "$MOUNT_POINT/boot/grub/grub.cfg" \
+    || die "failed to regenerate grub.cfg"
+grep -q 'alpine_repo=' "$MOUNT_POINT/boot/grub/grub.cfg" \
+    || die "grub.cfg has no alpine_repo entry - please re-run the installer"
 
 sync
 umount "$MOUNT_POINT" || die "umount failed"

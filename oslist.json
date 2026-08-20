@@ -1,18 +1,22 @@
 [
   {
     "name": "CachyOS-260809",
-    "url": "https://cdn77.cachyos.org/ISO/desktop/260809/cachyos-desktop-linux-260809.iso"
+    "url": "https://cdn77.cachyos.org/ISO/desktop/260809/cachyos-desktop-linux-260809.iso",
+    "type": "arch"
   },
   {
     "name": "HirensBoot-pt-mirror",
-    "url": "https://mirrors.ptisp.pt/hbcd/HBCD_PE_x64.iso"
+    "url": "https://mirrors.ptisp.pt/hbcd/HBCD_PE_x64.iso",
+    "type": "none"
   },
   {
     "name": "Ubuntu-22.04",
-    "url": "https://releases.ubuntu.com/26.04/ubuntu-26.04-desktop-amd64.iso"
+    "url": "https://releases.ubuntu.com/26.04/ubuntu-26.04-desktop-amd64.iso",
+    "type": "ubuntu"
   },
   {
     "name": "ArchLinux-2026-08-01-x86_64",
-    "url": "https://fastly.mirror.pkgbuild.com/iso/2026.08.01/archlinux-2026.08.01-x86_64.iso"
+    "url": "https://fastly.mirror.pkgbuild.com/iso/2026.08.01/archlinux-2026.08.01-x86_64.iso",
+    "type": "arch"
   }
 ]

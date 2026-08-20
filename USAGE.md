@@ -124,8 +124,9 @@ What next?
 - **1 — Mount the ISO and open the installer**: mounts the ISO and opens a shell.
   Look for the installer inside (for example `./install*`, `casper`, `ubiquity` or
   `calamares`) and run it. Type `exit` to return to OSFinder.
-- **2 — Copy the ISO to the pen**: saves the ISO onto the pen so you can boot it on
-  another machine.
+- **2 — Copy the ISO to the pen**: saves the ISO onto the pen. On the next boot, the
+  GRUB menu shows an **"ISO: …"** entry for it — pick it and the ISO boots,
+  Ventoy-style, ready to install.
 - **3 — Search another OS**: start a new search.
 
 ### Shell (advanced users)
