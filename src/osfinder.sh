@@ -196,6 +196,7 @@ EOF
 
         if ip route show 2>/dev/null | grep -q '^default'; then
             if pen=$(find_pen); then
+                mount -o remount,rw "$pen" 2>/dev/null || true
                 mkdir -p "$pen/etc"
                 cp "$conf" "$pen/etc/wpa_supplicant.conf" 2>/dev/null
             fi
@@ -315,7 +316,7 @@ mount_and_open() {
 
 # Copy the downloaded ISO onto the USB pen so it can be booted elsewhere
 copy_to_pen() {
-    local iso="$1" pen=""
+    local iso="$1" pen="" size err
     for d in /media/*; do
         [ -d "$d" ] && [ -f "$d/.boot_repository" ] && pen="$d"
     done
@@ -324,11 +325,24 @@ copy_to_pen() {
         sleep 2
         return 1
     fi
+    size=$(wc -c < "$iso" 2>/dev/null || echo 0)
+    # FAT32/vfat cannot store files over 4 GiB
+    if [ "$size" -gt 4294967295 ]; then
+        echo "${RED}ISO is larger than 4 GB.${RESET}"
+        echo "${DIM}The pen uses FAT32, which cannot hold files over 4 GB.${RESET}"
+        echo "${DIM}Use option 1 (Mount the ISO) to install directly instead.${RESET}"
+        sleep 4
+        return 1
+    fi
     echo "Copying ISO to $pen (this can take a while)..."
-    if cp "$iso" "$pen/" 2>/dev/null; then
+    # The pen is the boot device, so Alpine may have mounted it read-only.
+    # Remount it writable before copying.
+    mount -o remount,rw "$pen" 2>/dev/null || true
+    if err=$(cp "$iso" "$pen/" 2>&1); then
         echo "${GREEN}Saved to ${WHITE}${pen}/$(basename "$iso")${RESET}"
     else
         echo "${RED}Copy failed.${RESET}"
+        [ -n "$err" ] && echo "$err"
     fi
     sleep 2
     return 0
