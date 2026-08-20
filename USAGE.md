@@ -60,8 +60,9 @@ Internet: Connected / OFF
 
   1. Search and download an OS
   2. Set up WiFi
-  3. Shell (for advanced users)
-  4. Power off
+  3. Remove an ISO from the USB pen
+  4. Shell (for advanced users)
+  5. Power off
 ```
 
 The **Internet** status at the top shows whether you're connected
@@ -129,14 +130,31 @@ What next?
   Ventoy-style, ready to install.
 - **3 — Search another OS**: start a new search.
 
+### Removing an ISO from the pen
+
+Option **3** in the main menu lists the ISOs currently on the pen:
+
+```
+Remove an ISO from the pen:
+---------------------
+  1. archlinux-2026.08.01-x86_64.iso
+---------------------
+Type a number to remove it, or 'q' to go back.
+Select> 1
+```
+
+- Type a number and confirm with `y` — the file is deleted and its **"ISO: …"**
+  entry is removed from the GRUB menu automatically.
+- **q** (or just Enter) goes back to the main menu.
+
 ### Shell (advanced users)
 
-Option **3** opens a shell in the live Alpine environment. Useful for checking the
+Option **4** opens a shell in the live Alpine environment. Useful for checking the
 network, disks, etc. Type `exit` to return to the menu.
 
 ### Power off
 
-Option **4** shuts down the computer.
+Option **5** shuts down the computer.
 
 ## Requirements
 

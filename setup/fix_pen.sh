@@ -91,7 +91,7 @@ echo "Rebuilding apkovl overlay..."
 # --- 2. Regenerate grub.cfg (alpine_repo fix + ISO boot entries) ---
 echo "Regenerating grub.cfg (alpine_repo + ISO boot entries)..."
 mkdir -p "$MOUNT_POINT/boot/grub"
-sh "$PROJECT_DIR/setup/gen_grub_cfg.sh" "$PROJECT_DIR" > "$MOUNT_POINT/boot/grub/grub.cfg" \
+sh "$PROJECT_DIR/setup/gen_grub_cfg.sh" "$PROJECT_DIR" "$MOUNT_POINT" > "$MOUNT_POINT/boot/grub/grub.cfg" \
     || die "failed to regenerate grub.cfg"
 grep -q 'alpine_repo=' "$MOUNT_POINT/boot/grub/grub.cfg" \
     || die "grub.cfg has no alpine_repo entry - please re-run the installer"

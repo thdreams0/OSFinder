@@ -16,8 +16,9 @@ Boot the pen and you land in a simple menu:
 ```
   1. Search and download an OS
   2. Set up WiFi
-  3. Shell (for advanced users)
-  4. Power off
+  3. Remove an ISO from the USB pen
+  4. Shell (for advanced users)
+  5. Power off
 ```
 
 - **Search** by typing part of an OS name (e.g. `ubuntu`, `cachyos`).
@@ -71,6 +72,8 @@ Alpine Linux loads into RAM and the menu appears automatically. That's it.
   2. **Copy the ISO to the pen** — save it for later or for another machine; on the
      next boot the GRUB menu boots it directly (Ventoy-style);
   3. **Search another OS**.
+- **Remove an ISO** from the pen anytime with **3. Remove an ISO from the USB pen** —
+  the file is deleted and its GRUB entry disappears automatically.
 
 ## Requirements
 

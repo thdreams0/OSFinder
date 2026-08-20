@@ -170,7 +170,7 @@ echo "Building Alpine apkovl overlay..."
 # Step 10: Write GRUB configuration (base entries + ISO boot entries)
 echo "Writing GRUB configuration..."
 mkdir -p "$MOUNT_POINT/boot/grub"
-sh "$PROJECT_DIR/setup/gen_grub_cfg.sh" "$PROJECT_DIR" > "$MOUNT_POINT/boot/grub/grub.cfg" \
+sh "$PROJECT_DIR/setup/gen_grub_cfg.sh" "$PROJECT_DIR" "$MOUNT_POINT" > "$MOUNT_POINT/boot/grub/grub.cfg" \
     || die "failed to generate grub.cfg"
 
 # Step 11: Install GRUB for BIOS and UEFI

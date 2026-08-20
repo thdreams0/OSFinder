@@ -155,6 +155,10 @@ done
 cp "$PROJECT_DIR/src/osfinder.sh" "$OVL_DIR/usr/local/bin/osfinder.sh"
 chmod +x "$OVL_DIR/usr/local/bin/osfinder.sh"
 
+# GRUB generator, so the TUI can keep the boot menu in sync (remove/add ISOs)
+cp "$PROJECT_DIR/setup/gen_grub_cfg.sh" "$OVL_DIR/usr/local/bin/gen_grub_cfg.sh"
+chmod +x "$OVL_DIR/usr/local/bin/gen_grub_cfg.sh"
+
 # Pack the overlay
 tar -C "$OVL_DIR" -czf "$OUT" . || { rm -rf "$OVL_DIR"; exit 1; }
 rm -rf "$OVL_DIR"

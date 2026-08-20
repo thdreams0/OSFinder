@@ -340,12 +340,108 @@ copy_to_pen() {
     mount -o remount,rw "$pen" 2>/dev/null || true
     if err=$(cp "$iso" "$pen/" 2>&1); then
         echo "${GREEN}Saved to ${WHITE}${pen}/$(basename "$iso")${RESET}"
+        if grub_regen "$pen"; then
+            echo "${GREEN}GRUB menu updated: the ISO is bootable from the pen.${RESET}"
+        else
+            echo "${DIM}GRUB menu not updated (regenerate with fix_pen later).${RESET}"
+        fi
     else
         echo "${RED}Copy failed.${RESET}"
         [ -n "$err" ] && echo "$err"
     fi
     sleep 2
     return 0
+}
+
+# Regenerate the GRUB menu so it only lists ISOs actually on the pen
+grub_regen() {
+    local pen="$1" url grub_new
+    [ -f "$pen/boot/grub/grub.cfg" ] || return 1
+    [ -x /usr/local/bin/gen_grub_cfg.sh ] || return 1
+    command -v jq >/dev/null 2>&1 || return 1
+    for url in "$OS_LIST_URL" "$OS_LIST_FALLBACK_URL"; do
+        curl -sL --max-time 15 "$url" > /tmp/osf_oslist.json 2>/dev/null && break
+    done
+    [ -s /tmp/osf_oslist.json ] || return 1
+    grub_new="/tmp/grub.cfg.new"
+    LIST_FILE=/tmp/osf_oslist.json \
+        sh /usr/local/bin/gen_grub_cfg.sh /tmp "$pen" > "$grub_new" 2>/dev/null || return 1
+    grep -q 'OSFinder TUI' "$grub_new" || return 1
+    mv "$grub_new" "$pen/boot/grub/grub.cfg"
+    rm -f /tmp/osf_oslist.json "$grub_new"
+    return 0
+}
+
+# Remove an ISO from the pen (and drop its GRUB entry)
+remove_from_pen() {
+    local pen="" isos="" i=1 f path choice confirm
+    for d in /media/*; do
+        [ -d "$d" ] && [ -f "$d/.boot_repository" ] && pen="$d"
+    done
+    if [ -z "$pen" ]; then
+        echo "${RED}USB pen not found.${RESET}"
+        sleep 2
+        return 1
+    fi
+    mount -o remount,rw "$pen" 2>/dev/null || true
+    isos=$(ls -1 "$pen"/*.iso 2>/dev/null)
+    if [ -z "$isos" ]; then
+        echo "${YELLOW}There are no ISOs on the pen to remove.${RESET}"
+        sleep 2
+        return 0
+    fi
+    printf '%s\n' "$isos" > /tmp/osf_isos_$$
+
+    while :; do
+        tput clear 2>/dev/null || printf '\033[2J\033[H'
+        show_title
+        echo ""
+        echo "${BOLD}Remove an ISO from the pen:${RESET}"
+        echo "---------------------"
+        i=1
+        while IFS= read -r f; do
+            printf "  %d. %s\n" "$i" "$(basename "$f")"
+            i=$((i + 1))
+        done < /tmp/osf_isos_$$
+        echo "---------------------"
+        echo "${DIM}Type a number to remove it, or 'q' to go back.${RESET}"
+        echo ""
+        printf "${BLUE}Select> ${RESET}"
+        read -r choice || { rm -f /tmp/osf_isos_$$; return 0; }
+        case "$choice" in
+            q|Q|quit|sair|voltar|"") rm -f /tmp/osf_isos_$$; return 0 ;;
+        esac
+        if [ "$choice" -eq "$choice" ] 2>/dev/null; then
+            path=$(sed -n "${choice}p" /tmp/osf_isos_$$ 2>/dev/null)
+            if [ -z "$path" ]; then
+                echo "${RED}Invalid selection.${RESET}"
+                sleep 1
+                continue
+            fi
+            printf "${YELLOW}Delete ${WHITE}%s${YELLOW}? Type 'y' to confirm: ${RESET}" "$(basename "$path")"
+            read -r confirm
+            case "$confirm" in
+                y|Y|yes|sim|s)
+                    if rm -f "$path" 2>/dev/null; then
+                        echo "${GREEN}Removed: ${WHITE}$(basename "$path")${RESET}"
+                        if grub_regen "$pen"; then
+                            echo "${GREEN}GRUB menu updated.${RESET}"
+                        else
+                            echo "${DIM}GRUB menu not updated (regenerate with fix_pen later).${RESET}"
+                        fi
+                    else
+                        echo "${RED}Could not remove the file.${RESET}"
+                        echo "${DIM}The pen may be mounted read-only.${RESET}"
+                    fi
+                    sleep 2
+                    ;;
+                *) echo "${DIM}Nothing removed.${RESET}"; sleep 1 ;;
+            esac
+        else
+            echo "${RED}Type the number of the ISO to remove.${RESET}"
+            sleep 1
+        fi
+    done
 }
 
 # Post-download menu
@@ -555,8 +651,9 @@ main() {
         echo "${BOLD}What do you want to do?${RESET}"
         echo "  1. ${WHITE}Search and download an OS${RESET}"
         echo "  2. ${WHITE}Set up WiFi${RESET}"
-        echo "  3. ${WHITE}Shell (for advanced users)${RESET}"
-        echo "  4. ${WHITE}Power off${RESET}"
+        echo "  3. ${WHITE}Remove an ISO from the USB pen${RESET}"
+        echo "  4. ${WHITE}Shell (for advanced users)${RESET}"
+        echo "  5. ${WHITE}Power off${RESET}"
         echo ""
         printf "${BLUE}Choose an option> ${RESET}"
         read -r choice || break
@@ -568,17 +665,22 @@ main() {
                 echo "${DIM}Press Enter to continue...${RESET}"
                 read -r enter || break
                 ;;
-            3|"shell")
+            3)
+                remove_from_pen
+                echo "${DIM}Press Enter to continue...${RESET}"
+                read -r enter || break
+                ;;
+            4|"shell")
                 echo "${YELLOW}Shell (type 'exit' to go back).${RESET}"
                 /bin/sh
                 ;;
-            4|"poweroff"|"quit"|"exit")
+            5|"poweroff"|"quit"|"exit")
                 echo "${YELLOW}Powering off...${RESET}"
                 sleep 1
                 poweroff -f 2>/dev/null || busybox poweroff -f 2>/dev/null || true
                 exit 0
                 ;;
-            *) echo "${RED}Type 1, 2, 3 or 4.${RESET}"; sleep 1 ;;
+            *) echo "${RED}Type 1, 2, 3, 4 or 5.${RESET}"; sleep 1 ;;
         esac
     done
 }
