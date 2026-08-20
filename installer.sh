@@ -5,13 +5,6 @@
 
 PROJECT_DIR="/home/andre/Projects/OSFinder"
 
-# Load Supabase credentials from config/.env (kept out of git)
-if [ -r "$PROJECT_DIR/config/.env" ]; then
-    . "$PROJECT_DIR/config/.env"
-elif [ -r /etc/osfinder.env ]; then
-    . /etc/osfinder.env
-fi
-
 # Root check: this script must be run with sudo/root privileges
 if [ "$(id -u)" -ne 0 ]; then
     echo "ERROR: This script requires root privileges."
@@ -120,12 +113,12 @@ echo "========================================"
 echo ""
 echo "--- Project Structure ---"
 [ -f "$PROJECT_DIR/src/osfinder.sh" ]; TUI_FILE=$?
-[ -f "$PROJECT_DIR/config/.env" ]; ENV_FILE=$?
+[ -f "$PROJECT_DIR/oslist.json" ]; LIST_FILE=$?
 [ -f "$PROJECT_DIR/setup/usb_setup.sh" ]; USB_FILE=$?
-[ -f "$PROJECT_DIR/README" ]; README_FILE=$?
+[ -f "$PROJECT_DIR/README.md" ]; README_FILE=$?
 [ -f "$PROJECT_DIR/USAGE.md" ]; USAGE_FILE=$?
 check_ok $TUI_FILE "TUI script exists"
-check_ok $ENV_FILE "Supabase config exists"
+check_ok $LIST_FILE "OS list exists"
 check_ok $USB_FILE "USB setup script exists"
 check_ok $README_FILE "README exists"
 check_ok $USAGE_FILE "User guide exists"
@@ -147,26 +140,23 @@ command -v jq >/dev/null; check_ok $? "JSON processor available"
 command -v tput >/dev/null; check_ok $? "Terminal handling available"
 
 # ===========================================
-# 4. SUPABASE CONNECTIVITY
+# 4. OS LIST VALIDATION (public JSON in this repo)
 # ===========================================
 echo ""
-echo "--- Supabase Connectivity ---"
-if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ]; then
-    SUPABASE_RESPONSE=$(curl -s "$SUPABASE_URL?select=os_name" \
-        -H "apikey: $SUPABASE_ANON_KEY" \
-        -H "Authorization: Bearer $SUPABASE_ANON_KEY" 2>/dev/null)
-    if [ -n "$SUPABASE_RESPONSE" ] && [ "$SUPABASE_RESPONSE" != "[]" ]; then
-        check_ok 0 "Supabase anon key works - can read data"
-        SUPABASE_OK=0
-        RECORD_COUNT=$(echo "$SUPABASE_RESPONSE" | jq 'length' 2>/dev/null || echo "0")
-        echo "  Records in database: $RECORD_COUNT"
+echo "--- OS List Validation ---"
+if [ -f "$PROJECT_DIR/oslist.json" ]; then
+    LIST_OK=0
+    LIST_COUNT=$(jq 'length' "$PROJECT_DIR/oslist.json" 2>/dev/null || echo "0")
+    if [ "$LIST_COUNT" -gt 0 ] 2>/dev/null; then
+        check_ok 0 "OS list is valid JSON"
+        echo "  Entries in list: $LIST_COUNT"
     else
-        echo "  [FAIL] Supabase anon key cannot read data"
-        SUPABASE_OK=1
+        echo "  [FAIL] oslist.json is not valid JSON or is empty"
+        LIST_OK=1
     fi
 else
-    echo "  [SKIP] Supabase check (config/.env missing)"
-    SUPABASE_OK=1
+    echo "  [FAIL] oslist.json not found"
+    LIST_OK=1
 fi
 
 # ===========================================
@@ -183,9 +173,9 @@ echo "Components:"
 DOCS_OK=1
 [ "$README_FILE" = "0" ] && [ "$USAGE_FILE" = "0" ] && DOCS_OK=0
 echo "  [1/4] TUI Script (src/osfinder.sh)          : $(print_ok "$TUI_OK" "Syntax valid, sh+curl+jq+tput required")"
-echo "  [2/4] Supabase Connectivity                  : $(print_ok "$SUPABASE_OK" "Anon key can read list table")"
+echo "  [2/4] OS List (oslist.json)                  : $(print_ok "$LIST_OK" "Public JSON list, valid")"
 echo "  [3/4] USB Setup (setup/usb_setup.sh)       : $(print_ok "$USB_FILE" "Creates bootable USB with Alpine + GRUB")"
-echo "  [4/4] Documentation (README, USAGE.md)     : $(print_ok "$DOCS_OK" "Available for user reference")"
+echo "  [4/4] Documentation (README.md, USAGE.md)  : $(print_ok "$DOCS_OK" "Available for user reference")"
 echo ""
 echo "  The USB at $TARGET_DEV will be formatted as FAT32"
 echo "  and contain the OSFinder TUI system."

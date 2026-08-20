@@ -1,57 +1,58 @@
 # OSFinder
 
-Uma ferramenta TUI (Text User Interface) leve que boota de USB e permite procurar,
-descarregar e montar ISOs de sistemas operativos em qualquer computador — incluindo
-máquinas sem SO instalado (bare metal). A biblioteca de ISOs é gerida no Supabase.
+A lightweight TUI (Text User Interface) tool that boots from a USB stick and lets you
+search, download and mount operating system ISOs on any computer — including machines
+with no OS installed (bare metal). The OS library is a public JSON file (`oslist.json`)
+hosted in this GitHub repository — no database, no credentials.
 
-## Como funciona
+## How it works
 
-1. **Boot**: inseres a pen USB num computador e arrancas a partir dela.
-2. **Alpine em RAM**: um Alpine Linux mínimo arranca para a RAM (diskless) e abre a TUI automaticamente.
-3. **Rede**: se não houver internet, a TUI faz o setup sozinha — tenta ethernet (DHCP) e, se não houver, abre o assistente WiFi para ligares a uma rede.
-4. **Busca**: escreves parte do nome do OS (ex.: `ubuntu`, `cachyos`) e a TUI consulta o Supabase (correspondência parcial).
-5. **Download**: escolhes o resultado, o ISO é descarregado para `/tmp` (RAM) com barra de progresso.
-6. **Pós-download**: podes montar o ISO e abrir o instalador, copiá-lo para a pen, ou procurar outro OS.
+1. **Boot**: plug the USB stick into a computer and boot from it.
+2. **Alpine in RAM**: a minimal Alpine Linux boots into RAM (diskless) and starts the TUI automatically.
+3. **Network**: if there's no internet, the TUI sets itself up — it tries ethernet (DHCP) and, if that fails, opens the WiFi wizard so you can connect.
+4. **Search**: type part of the OS name (e.g. `ubuntu`, `cachyos`) and the TUI fetches `oslist.json` from GitHub and filters it locally (partial, case-insensitive).
+5. **Download**: pick a result; the ISO is downloaded to `/tmp` (RAM) with a progress bar.
+6. **Post-download**: mount the ISO and open the installer, copy it to the pen, or search another OS.
 
-Sem necessidade de internet no primeiro arranque: o `curl`, `jq`, `wpa_supplicant`, `iw` e
-as fontes de consola vêm embutidos no overlay — funciona em máquinas só-WiFi, sem ethernet.
+No internet needed on first boot: `curl`, `jq`, `wpa_supplicant`, `iw` and the console
+fonts are bundled in the overlay — it works on WiFi-only machines, without ethernet.
 
-## Estrutura
+## Structure
 
 ```
 OSFinder/
-├── src/osfinder.sh           # A TUI (menu, busca, download, WiFi)
-├── installer.sh              # Script de verificação/instalação (requer sudo)
+├── src/osfinder.sh           # The TUI (menu, search, download, WiFi)
+├── installer.sh              # Verification/install script (requires sudo)
+├── oslist.json               # Public OS list (name + URL) - the "database"
 ├── setup/
-│   ├── usb_setup.sh          # Cria a pen bootável do zero (apaga tudo!)
-│   ├── fix_pen.sh            # Atualiza uma pen existente (reconstrói o overlay)
-│   └── build_apkovl.sh       # Constrói só o overlay Alpine (apkovl)
-├── config/.env               # Credenciais Supabase (NÃO versionado)
-└── .website/index.html       # Página web opcional
+│   ├── usb_setup.sh          # Creates the bootable pen from scratch (wipes everything!)
+│   ├── fix_pen.sh            # Updates an existing pen (rebuilds the overlay)
+│   └── build_apkovl.sh       # Builds just the Alpine overlay (apkovl)
+└── .website/index.html       # Optional web page
 ```
 
-## Criar a pen USB
+## Create the USB pen
 
 ```bash
-# Do zero (apaga todos os dados da pen!)
+# From scratch (wipes all data on the pen!)
 sudo bash setup/usb_setup.sh /dev/sdX
 
-# Atualizar uma pen que já existe (após alterar osfinder.sh/config)
+# Update an existing pen (after changing osfinder.sh/config)
 sudo bash setup/fix_pen.sh /dev/sdX
 ```
 
-Substitui `/dev/sdX` pela pen (ex.: `/dev/sdb`). **Atenção**: todo o conteúdo do
-dispositivo indicado é apagado.
+Replace `/dev/sdX` with your pen (e.g. `/dev/sdb`). **Warning**: all data on the
+specified device is erased.
 
-Verificação do projeto (componentes, sintaxe, ligação ao Supabase):
+Verify the project (components, syntax, OS list):
 
 ```bash
 sudo bash installer.sh
 ```
 
-## Usar a TUI
+## Using the TUI
 
-No menu principal:
+Main menu:
 
 ```
   1. Search and download an OS
@@ -60,66 +61,71 @@ No menu principal:
   4. Power off
 ```
 
-- **Sem internet ao arrancar**: a TUI tenta ethernet e depois abre o assistente WiFi sozinha.
-- **Busca**: digita parte do nome e Enter. Enter com o campo vazio volta atrás.
-  O resultado é escolhido pelo número.
-- **Download**: barra de progresso; o ISO fica em `/tmp/<nome>.iso` (memória RAM).
-- **Pós-download**:
-  1. *Mount the ISO* — monta em `/mnt/iso` e abre um shell para correres o instalador;
-  2. *Copy ISO to the pen* — grava o ISO na pen (marcada com `.boot_repository`);
-  3. *Search another OS* — nova busca.
-- **WiFi**: o assistente escaneia, lista as redes por número, pede a palavra-passe
-  (oculta) e guarda a configuração na pen (`etc/wpa_supplicant.conf`) para reconexão
-  automática no próximo arranque.
+- **No internet at boot**: the TUI tries ethernet, then opens the WiFi wizard by itself.
+- **Search**: type part of the name and press Enter. Enter with an empty field goes back.
+  Pick a result by number.
+- **Download**: progress bar; the ISO is stored at `/tmp/<name>.iso` (RAM).
+- **Post-download**:
+  1. *Mount the ISO* — mounts at `/mnt/iso` and opens a shell to run the installer;
+  2. *Copy ISO to the pen* — saves the ISO to the pen (marked with `.boot_repository`);
+  3. *Search another OS* — new search.
+- **WiFi**: the wizard scans, lists networks by number, asks for the password
+  (hidden) and saves the config on the pen (`etc/wpa_supplicant.conf`) for automatic
+  reconnection on the next boot.
 
-## Configuração
+## The OS list
 
-Edita `config/.env` (mantido fora do git):
+The library is just a public JSON file in this repository — anyone can view it:
 
-```bash
-SUPABASE_URL="https://SEU_PROJETO.supabase.co/rest/v1/list"
-SUPABASE_ANON_KEY="a_tua_anon_key"
+```json
+[
+  { "name": "Ubuntu-22.04", "url": "https://.../ubuntu.iso" }
+]
 ```
 
-Ao construir a pen, estas credenciais são injetadas no overlay como `/etc/osfinder.env`.
+The TUI fetches it from jsDelivr CDN (fallback: GitHub raw), no credentials needed.
+To point it at your own fork, edit the URLs in `src/osfinder.sh`.
 
-## Adicionar OS à biblioteca
+## Adding an OS to the library
 
-Insere uma linha na tabela `list` do Supabase (colunas `os_name` e `link_to_download`):
+Edit `oslist.json` and open a pull request (or just commit on `main`):
 
-```sql
-INSERT INTO list (os_name, link_to_download) VALUES ('Ubuntu-24.04', 'https://.../ubuntu.iso');
+```json
+{ "name": "Debian-12", "url": "https://.../debian.iso" }
 ```
 
-A busca parcial e o download usam estas colunas diretamente — sem códigos nem mapeamento.
+The TUI searches by name (partial match) and uses `url` for the download — no codes
+or mapping.
 
-## Requisitos
+## Requirements
 
-### Para criar a pen
-- Linux com `sudo` (o setup usa `parted`/`sgdisk`-compatível, `grub-install`, `unsquashfs`, `curl`)
-- Pen USB com pelo menos 2 GB (a instalação Alpine + overlay ocupa < 400 MB)
-- Internet na máquina de build (para descarregar o Alpine netboot e as ferramentas)
+### To create the pen
+- Linux with `sudo` (setup uses `parted`/`sgdisk`-compatible, `grub-install`, `unsquashfs`, `curl`)
+- USB pen with at least 2 GB (Alpine + overlay footprint is < 400 MB)
+- Internet on the build machine (to download Alpine netboot and the tools)
 
-### Para arrancar (computador alvo)
-- Firmware BIOS ou UEFI com boot USB
-- RAM suficiente: o ISO é descarregado para `/tmp` (RAM). Com um ISO de 4 GB, precisas de
-  RAM livre equivalente (8 GB é confortável, 16 GB recomendado)
-- Internet para descarregar ISOs (WiFi ou ethernet)
+### To boot (target computer)
+- BIOS or UEFI firmware with USB boot
+- Enough RAM: the ISO is downloaded to `/tmp` (RAM). For a 4 GB ISO you need
+  equivalent free RAM (8 GB is comfortable, 16 GB recommended)
+- Internet to download ISOs (WiFi or ethernet)
 
-## Solução de problemas
+## Troubleshooting
 
-- **"Could not mount the ISO"**: a sessão live tenta carregar o módulo `loop` e criar
-  `/dev/loop*` automaticamente; se falhar, usa a opção *Copy ISO to the pen* e arranca a partir da pen.
-- **Sem internet e sem WiFi listado**: confirma que o firmware está com a interface sem fios
-  ativa; pode ser preciso ativar a placa no firmware.
-- **Boot preso no kernel / SATA não detetado**: corre `sudo bash setup/fix_pen.sh /dev/sdX`
-  (injeta `sd_mod`/`scsi_mod` no initramfs).
-- **Cores/estilo**: a TUI usa apenas verde (sucesso) e vermelho (erro); o resto é texto simples.
-- **Texto pequeno/grande**: a TUI escolhe automaticamente uma fonte de consola maior
-  conforme a resolução do monitor (via `setfont`).
+- **"Could not mount the ISO"**: the live session tries to load the `loop` module and
+  create `/dev/loop*` automatically; if it fails, use *Copy ISO to the pen* and boot from the pen.
+- **No results on search**: check the name matches an entry in `oslist.json`; check the
+  internet connection (the `Internet` status at the top).
+- **"No internet and no WiFi listed"**: check the firmware has the wireless interface
+  enabled; you may need to enable the card in the firmware.
+- **Stuck at boot / SATA not detected**: run `sudo bash setup/fix_pen.sh /dev/sdX`
+  (injects `sd_mod`/`scsi_mod` into the initramfs).
+- **Colors/style**: the TUI only uses green (success) and red (errors); the rest is plain text.
+- **Text too small/big**: the TUI picks a larger console font automatically based on the
+  monitor resolution (via `setfont`).
 
-## Notas
+## Notes
 
-- O download vai para **RAM** (`/tmp`), nunca para a pen — nada fica persistido no PC alvo.
-- Não são necessários códigos numéricos: a busca é por nome (correspondência parcial).
-- As credenciais Supabase nunca são versionadas — vivem apenas em `config/.env`.
+- The download goes to **RAM** (`/tmp`), never to the pen — nothing persists on the target PC.
+- No numeric codes needed: search is by name (partial match).
+- No credentials: the OS list is a public file anyone can view and contribute to.

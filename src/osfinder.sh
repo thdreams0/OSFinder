@@ -3,22 +3,12 @@
 # Bare-metal compatible: uses only sh, curl, jq, tput
 # Runs on Alpine Linux (busybox ash) booted from the OSFinder USB
 #
-# Maps user-friendly OS names to integer codes for Supabase storage
-# The codes are transparent to the user - they just type/search OS names
+# The OS library is a public JSON file hosted in the GitHub repository
+# (oslist.json), served via jsDelivr CDN with a GitHub raw fallback.
 
-# Supabase credentials - loaded at runtime from config/.env (build host) or
-# /etc/osfinder.env (baked into the apkovl). Keep secrets OUT of git.
-SUPABASE_URL=""
-SUPABASE_ANON_KEY=""
-if [ -r /etc/osfinder.env ]; then
-    . /etc/osfinder.env
-elif [ -r "$(dirname "$0")/../config/.env" ]; then
-    . "$(dirname "$0")/../config/.env"
-fi
-if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
-    echo "Missing SUPABASE_URL / SUPABASE_ANON_KEY (config/.env)" >&2
-    exit 1
-fi
+# Public OS list (name|url entries). No credentials needed - anyone can view.
+OS_LIST_URL="https://cdn.jsdelivr.net/gh/thdreams0/OSFinder@main/oslist.json"
+OS_LIST_FALLBACK_URL="https://raw.githubusercontent.com/thdreams0/OSFinder/main/oslist.json"
 
 # Result temp file (one per process, reused across recursive calls)
 RESULTS_FILE="/tmp/osf_results_$$"
@@ -53,27 +43,32 @@ show_progress() {
     printf "] %d%%" "$pct"
 }
 
-# Supabase query function - returns os_name|link_to_download entries
-# Uses ilike for a real partial-match search bar (e.g. "ubu" matches Ubuntu)
-# Return codes: 0=found, 1=no results, 2=no network
+# Fetch the public OS list from GitHub and filter locally (partial, case-insensitive).
+# Returns name|url entries. Return codes: 0=found, 1=no results, 2=no network/list unreachable
 search_os() {
     local query="$1"
-    local result
+    local result url
 
     if ! ip route show 2>/dev/null | grep -q '^default'; then
         return 2
     fi
 
-    result=$(curl -s --max-time 15 "$SUPABASE_URL?os_name=ilike.*${query}*&select=os_name,link_to_download&order=os_name" \
-        -H "apikey: $SUPABASE_ANON_KEY" \
-        -H "Authorization: Bearer $SUPABASE_ANON_KEY" 2>/dev/null)
+    for url in "$OS_LIST_URL" "$OS_LIST_FALLBACK_URL"; do
+        result=$(curl -sL --max-time 15 "$url" 2>/dev/null)
+        [ -n "$result" ] && break
+    done
+    if [ -z "$result" ]; then
+        return 2
+    fi
 
-    if [ -z "$result" ] || [ "$result" = "[]" ]; then
+    result=$(printf '%s' "$result" | jq -r --arg q "$query" \
+        '.[] | select((.name | ascii_downcase) | contains(($q | ascii_downcase))) | "\(.name)|\(.url)"' 2>/dev/null)
+
+    if [ -z "$result" ]; then
         echo ""
         return 1
     fi
-
-    echo "$result" | jq -r '.[] | "\(.os_name)|\(.link_to_download)"' 2>/dev/null
+    echo "$result"
     return 0
 }
 

@@ -1,50 +1,50 @@
-# OSFinder - Como Usar (How to Use)
+# OSFinder - User Guide
 
-## O que é
+## What it is
 
-O OSFinder é uma TUI (Text User Interface) que arranca a partir de uma pen USB,
-boota um Alpine Linux mínimo para a RAM e permite procurar, descarregar e montar
-ISOs de sistemas operativos. Ideal para computadores sem SO instalado.
+OSFinder is a TUI (Text User Interface) that boots from a USB pen, loads a minimal
+Alpine Linux into RAM and lets you search, download and mount operating system ISOs.
+Ideal for computers without an OS installed.
 
-## Criar a pen USB
+## Creating the USB pen
 
-### Do zero
+### From scratch
 
 ```bash
-# Do diretório do projeto (requer sudo)
+# From the project directory (requires sudo)
 sudo bash setup/usb_setup.sh /dev/sdX
 ```
 
-Substitui `/dev/sdX` pela pen (ex.: `/dev/sdb`).
-**Atenção**: todos os dados no dispositivo são apagados.
+Replace `/dev/sdX` with your pen (e.g. `/dev/sdb`).
+**Warning**: all data on the device is erased.
 
-### Atualizar uma pen que já existe
+### Updating an existing pen
 
-Depois de alterares o `src/osfinder.sh` ou o `config/.env`, reconstrói o overlay
-sem ter de recriar a pen do zero:
+After changing `src/osfinder.sh` or `oslist.json`, rebuild the overlay without
+recreating the pen from scratch:
 
 ```bash
 sudo bash setup/fix_pen.sh /dev/sdX
 ```
 
-### Verificar o projeto
+### Verifying the project
 
 ```bash
 sudo bash installer.sh
 ```
 
-Verifica a sintaxe da TUI, a presença dos ficheiros do projeto, a ligação ao
-Supabase e a documentação.
+Checks the TUI syntax, the presence of the project files, the OS list (`oslist.json`)
+and the documentation.
 
-## Arranque no computador alvo
+## Booting on the target computer
 
-1. Insere a pen e arranca a partir dela (tecla de boot: **F8**, **F12**, **Del** ou **F2**).
-2. No menu GRUB, escolhe a entrada do OSFinder.
-3. O Alpine arranca para a RAM e a TUI abre automaticamente no ecrã.
+1. Plug in the pen and boot from it (boot key: **F8**, **F12**, **Del** or **F2**).
+2. In the GRUB menu, pick the OSFinder entry.
+3. Alpine boots into RAM and the TUI opens automatically on screen.
 
-## A TUI
+## The TUI
 
-### Menu principal
+### Main menu
 
 ```
 ========================================
@@ -58,26 +58,26 @@ Internet: Connected / OFF
   4. Power off
 ```
 
-O estado da internet aparece no topo (verde = ligado, vermelho = desligado).
+The internet status is shown at the top (green = connected, red = off).
 
-### Rede automática
+### Automatic network setup
 
-- **Sem internet ao arrancar**: a TUI tenta ethernet (DHCP) e, se não resultar,
-  abre o assistente WiFi para ligares manualmente. Se recusares, podes ligar mais
-  tarde com a opção **2. Set up WiFi**.
+- **No internet at boot**: the TUI tries ethernet (DHCP) and, if that doesn't work,
+  opens the WiFi wizard for you to connect manually. If you decline, you can connect
+  later with **2. Set up WiFi**.
 
-### Assistente WiFi
+### WiFi wizard
 
-1. A TUI escaneia as redes disponíveis.
-2. Escolhe uma rede pelo **número** (ou escreve o nome).
-3. Digita a palavra-passe (fica oculta).
-4. Se a senha estiver errada, podes tentar novamente.
-5. A configuração é **guardada na pen** (`etc/wpa_supplicant.conf`) e a TUI
-   reconecta automaticamente nos próximos arranques, se não houver ethernet.
+1. The TUI scans the available networks.
+2. Pick a network by **number** (or type its name).
+3. Type the password (it stays hidden).
+4. If the password is wrong, you can try again.
+5. The config is **saved on the pen** (`etc/wpa_supplicant.conf`) and the TUI
+   reconnects automatically on later boots, when there's no ethernet.
 
-### Procurar e descarregar um OS
+### Searching and downloading an OS
 
-Escolhe a opção **1** no menu. Depois:
+Pick option **1** in the menu. Then:
 
 ```
 What do you want to install?
@@ -87,9 +87,9 @@ Press Enter with nothing typed to go back.
 Search> ubuntu
 ```
 
-- A busca é **parcial** (por nome): `ubuntu` encontra qualquer entrada que contenha "ubuntu".
-- **Enter com o campo vazio** volta ao menu.
-- Com resultados, aparece uma lista numerada:
+- The search is **partial** (by name): `ubuntu` matches any entry containing "ubuntu".
+- **Enter with an empty field** goes back to the menu.
+- With results, a numbered list appears:
 
 ```
 Available results:
@@ -100,9 +100,9 @@ Type the number to download
 Select> 1
 ```
 
-- O download mostra uma **barra de progresso** e guarda o ISO em `/tmp/<nome>.iso` (RAM).
+- The download shows a **progress bar** and stores the ISO at `/tmp/<name>.iso` (RAM).
 
-### Pós-download
+### Post-download
 
 ```
 Download complete: /tmp/ubuntu-22.04.iso
@@ -113,84 +113,79 @@ What next?
   3. Search another OS
 ```
 
-- **1 — Mount the ISO**: monta o ISO em `/mnt/iso` e abre um shell. Procura o
-  instalador lá dentro (ex.: `./install*`, `casper`, `ubiquity`, `calamares`) e
-  corre-o. Escreve `exit` para voltar à TUI.
-- **2 — Copy ISO to the pen**: grava o ISO na pen (a pen é detetada pelo marcador
-  `.boot_repository`) para arrancar noutra máquina.
-- **3 — Search another OS**: volta à busca.
+- **1 — Mount the ISO**: mounts the ISO at `/mnt/iso` and opens a shell. Look for
+  the installer inside (e.g. `./install*`, `casper`, `ubiquity`, `calamares`) and
+  run it. Type `exit` to return to the TUI.
+- **2 — Copy ISO to the pen**: writes the ISO to the pen (detected by the
+  `.boot_repository` marker) to boot on another machine.
+- **3 — Search another OS**: returns to the search.
 
-### Shell (avançado)
+### Shell (advanced)
 
-A opção **3** abre um shell no Alpine live (utilidade para diagnosticar rede,
-partições, etc.). Escreve `exit` para voltar à TUI.
+Option **3** opens a shell in the Alpine live environment (useful for diagnosing
+network, partitions, etc.). Type `exit` to return to the TUI.
 
-### Desligar
+### Power off
 
-A opção **4** desliga o computador.
+Option **4** shuts down the computer.
 
-## Adicionar OS à biblioteca
+## Adding an OS to the library
 
-Os ISOs são guardados no Supabase, na tabela `list`:
+ISOs are stored in a public JSON file in this repository, `oslist.json`:
 
-| Coluna            | Exemplo                                    |
-|-------------------|--------------------------------------------|
-| `os_name`         | `Ubuntu-22.04`                             |
-| `link_to_download`| `https://releases.ubuntu.com/.../ubuntu.iso` |
-
-```sql
-INSERT INTO list (os_name, link_to_download) VALUES ('Debian-12', 'https://.../debian.iso');
+```json
+[
+  { "name": "Ubuntu-22.04", "url": "https://releases.ubuntu.com/.../ubuntu.iso" },
+  { "name": "Debian-12", "url": "https://.../debian.iso" }
+]
 ```
 
-Não há códigos nem mapeamento: a busca parcial e o download usam estas colunas diretamente.
+Anybody can view the list. To add an OS, edit `oslist.json` and open a pull request
+(or commit on `main`). The TUI fetches the file from the jsDelivr CDN (fallback:
+GitHub raw) and filters it locally by name — no codes, no mapping, no credentials.
 
-## Configuração
+The list URL used by the TUI is defined in `src/osfinder.sh` (`OS_LIST_URL` and
+`OS_LIST_FALLBACK_URL`) — point them at your own fork if you host your own list.
 
-### Credenciais Supabase
+## Configuration
 
-Edita `config/.env` (fora do git):
+There is nothing to configure for the OS list: it is a public file, no API keys
+needed. If you fork the repository, update the two list URLs in `src/osfinder.sh`
+before building the pen.
 
-```bash
-SUPABASE_URL="https://SEU_PROJETO.supabase.co/rest/v1/list"
-SUPABASE_ANON_KEY="a_tua_anon_key"
-```
-
-Ao criar/atualizar a pen, as credenciais são injetadas no overlay como
-`/etc/osfinder.env`, usadas pela TUI em runtime.
-
-## Solução de problemas
+## Troubleshooting
 
 ### "Could not mount the ISO"
-A TUI tenta carregar o módulo `loop` e criar os devices `/dev/loop*`. Se mesmo assim
-falhar, usa a opção **2. Copy the ISO to the USB pen** e arranca a partir da pen.
+The TUI tries to load the `loop` module and create the `/dev/loop*` devices. If it
+still fails, use **2. Copy the ISO to the USB pen** and boot from the pen.
 
-### Sem resultados na busca
-- Confirma que o nome corresponde a uma entrada da tabela `list` (busca parcial).
-- Verifica a ligação (o estado `Internet` no topo).
-- Confirma que `config/.env` tem as credenciais corretas.
+### No results on search
+- Check the name matches an entry in `oslist.json` (partial search).
+- Check the connection (the `Internet` status at the top).
+- Check the list URLs in `src/osfinder.sh` are reachable (CDN / GitHub raw).
 
-### Download falha
-- Verifica a internet (WiFi/ethernet).
-- Confirma que `link_to_download` da entrada aponta para um URL válido.
+### Download fails
+- Check the internet (WiFi/ethernet).
+- Check that the entry's `url` points to a valid URL.
 
-### SATA / disco não detetado no boot
-Corre `sudo bash setup/fix_pen.sh /dev/sdX` — o script injeta `sd_mod`/`scsi_mod`
-no initramfs para discos SATA.
+### SATA / disk not detected at boot
+Run `sudo bash setup/fix_pen.sh /dev/sdX` — the script injects `sd_mod`/`scsi_mod`
+into the initramfs for SATA disks.
 
-### Texto pequeno ou grande
-A TUI deteta a resolução do monitor e escolhe uma fonte de consola maior
-(por exemplo `sun12x22` em ecrãs 1080p, `solar24x32` em 1440p+).
+### Text too small or too big
+The TUI detects the monitor resolution and picks a larger console font
+(e.g. `sun12x22` on 1080p screens, `solar24x32` on 1440p+).
 
-## Notas importantes
+## Important notes
 
-- ✅ **Não grava ISOs na pen automaticamente**: o download vai para `/tmp` (RAM).
-- ✅ **Sem internet no 1º boot**: as ferramentas necessárias vêm embutidas no overlay.
-- ✅ **WiFi funciona sem ethernet**: assistente integrado + reconexão automática.
-- ✅ **BIOS legacy e UEFI** suportados (GRUB).
-- ⚠️ **RAM**: ISOs grandes precisam de RAM livre em `/tmp` (tmpfs). Com ISOs de
-  vários GB, recomenda-se 8–16 GB de RAM no computador alvo.
-- ⚠️ **Credenciais**: nunca versionadas; vivem apenas em `config/.env`.
+- The download goes to **RAM** (`/tmp`), never to the pen automatically.
+- No internet needed on 1st boot: the required tools are bundled in the overlay.
+- WiFi works without ethernet: built-in wizard + automatic reconnection.
+- BIOS legacy and UEFI supported (GRUB).
+- RAM: large ISOs need free RAM in `/tmp` (tmpfs). For multi-GB ISOs,
+  8–16 GB of RAM on the target computer is recommended.
+- No credentials: the OS list is a public file anyone can view and contribute to.
 
 ---
 
-**OSFinder** - Descarrega ISOs bare-metal friendly via Supabase.
+**OSFinder** - Bare-metal friendly ISO downloads from a public GitHub list.

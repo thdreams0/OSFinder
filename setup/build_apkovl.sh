@@ -155,13 +155,6 @@ done
 cp "$PROJECT_DIR/src/osfinder.sh" "$OVL_DIR/usr/local/bin/osfinder.sh"
 chmod +x "$OVL_DIR/usr/local/bin/osfinder.sh"
 
-# Bake the Supabase credentials into the overlay (from config/.env, not git)
-if [ -r "$PROJECT_DIR/config/.env" ]; then
-    cp "$PROJECT_DIR/config/.env" "$OVL_DIR/etc/osfinder.env"
-else
-    echo "  WARNING: config/.env not found; TUI will not have Supabase credentials"
-fi
-
 # Pack the overlay
 tar -C "$OVL_DIR" -czf "$OUT" . || { rm -rf "$OVL_DIR"; exit 1; }
 rm -rf "$OVL_DIR"
