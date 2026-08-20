@@ -1,5 +1,7 @@
 # OSFinder
 
+**Search for an .iso in our list and download it, without an OS on your computer.**
+
 A lightweight tool that turns any USB stick into a bootable "ISO finder": boot it on
 any computer — even one with no OS installed — and search, download and run
 operating system installers, using just a text menu.
