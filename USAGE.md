@@ -33,7 +33,7 @@ sudo bash setup/fix_pen.sh /dev/sdX
 sudo bash installer.sh
 ```
 
-Verifica a sintaxe da TUI, a presença de `website/index.html`, a ligação ao
+Verifica a sintaxe da TUI, a presença dos ficheiros do projeto, a ligação ao
 Supabase e a documentação.
 
 ## Arranque no computador alvo

@@ -120,13 +120,11 @@ echo "========================================"
 echo ""
 echo "--- Project Structure ---"
 [ -f "$PROJECT_DIR/src/osfinder.sh" ]; TUI_FILE=$?
-[ -f "$PROJECT_DIR/website/index.html" ]; WEB_FILE=$?
 [ -f "$PROJECT_DIR/config/.env" ]; ENV_FILE=$?
 [ -f "$PROJECT_DIR/setup/usb_setup.sh" ]; USB_FILE=$?
 [ -f "$PROJECT_DIR/README" ]; README_FILE=$?
 [ -f "$PROJECT_DIR/USAGE.md" ]; USAGE_FILE=$?
 check_ok $TUI_FILE "TUI script exists"
-check_ok $WEB_FILE "Website exists"
 check_ok $ENV_FILE "Supabase config exists"
 check_ok $USB_FILE "USB setup script exists"
 check_ok $README_FILE "README exists"
@@ -149,28 +147,7 @@ command -v jq >/dev/null; check_ok $? "JSON processor available"
 command -v tput >/dev/null; check_ok $? "Terminal handling available"
 
 # ===========================================
-# 4. WEBSITE VALIDATION
-# ===========================================
-echo ""
-echo "--- Website Validation ---"
-WEB_OK=$WEB_FILE
-if grep -q "service_role" "$PROJECT_DIR/website/index.html" 2>/dev/null; then
-    echo "  [WARN] service_role key found (should use anon key for read-only)"
-else
-    check_ok 0 "No service_role key (read-only configured)"
-fi
-
-# Check for OS name fields
-if grep -q "osName\|OS_NAME" "$PROJECT_DIR/website/index.html" 2>/dev/null; then
-    check_ok 0 "OS name input field present"
-else
-    echo "  [FAIL] OS name input field missing"
-    WEB_OK=1
-fi
-[ "$WEB_FILE" = "0" ] || WEB_OK=1
-
-# ===========================================
-# 5. SUPABASE CONNECTIVITY
+# 4. SUPABASE CONNECTIVITY
 # ===========================================
 echo ""
 echo "--- Supabase Connectivity ---"
@@ -205,11 +182,10 @@ echo ""
 echo "Components:"
 DOCS_OK=1
 [ "$README_FILE" = "0" ] && [ "$USAGE_FILE" = "0" ] && DOCS_OK=0
-echo "  [1/5] TUI Script (src/osfinder.sh)          : $(print_ok "$TUI_OK" "Syntax valid, sh+curl+jq+tput required")"
-echo "  [2/5] Website (website/index.html)         : $(print_ok "$WEB_OK" "Read-only anon key, OS name inputs")"
-echo "  [3/5] Supabase Connectivity                  : $(print_ok "$SUPABASE_OK" "Anon key can read list table")"
-echo "  [4/5] USB Setup (setup/usb_setup.sh)       : $(print_ok "$USB_FILE" "Creates bootable USB with Alpine + GRUB")"
-echo "  [5/5] Documentation (README, USAGE.md)     : $(print_ok "$DOCS_OK" "Available for user reference")"
+echo "  [1/4] TUI Script (src/osfinder.sh)          : $(print_ok "$TUI_OK" "Syntax valid, sh+curl+jq+tput required")"
+echo "  [2/4] Supabase Connectivity                  : $(print_ok "$SUPABASE_OK" "Anon key can read list table")"
+echo "  [3/4] USB Setup (setup/usb_setup.sh)       : $(print_ok "$USB_FILE" "Creates bootable USB with Alpine + GRUB")"
+echo "  [4/4] Documentation (README, USAGE.md)     : $(print_ok "$DOCS_OK" "Available for user reference")"
 echo ""
 echo "  The USB at $TARGET_DEV will be formatted as FAT32"
 echo "  and contain the OSFinder TUI system."
