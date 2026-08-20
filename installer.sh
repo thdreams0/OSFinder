@@ -5,6 +5,13 @@
 
 PROJECT_DIR="/home/andre/Projects/OSFinder"
 
+# Load Supabase credentials from config/.env (kept out of git)
+if [ -r "$PROJECT_DIR/config/.env" ]; then
+    . "$PROJECT_DIR/config/.env"
+elif [ -r /etc/osfinder.env ]; then
+    . /etc/osfinder.env
+fi
+
 # Root check: this script must be run with sudo/root privileges
 if [ "$(id -u)" -ne 0 ]; then
     echo "ERROR: This script requires root privileges."
@@ -167,16 +174,21 @@ fi
 # ===========================================
 echo ""
 echo "--- Supabase Connectivity ---"
-SUPABASE_RESPONSE=$(curl -s "https://fegfssihbiatpwkqovaq.supabase.co/rest/v1/list?select=os_name" \
-    -H "apikey: ***REMOVED***" \
-    -H "Authorization: Bearer ***REMOVED***" 2>/dev/null)
-if [ -n "$SUPABASE_RESPONSE" ] && [ "$SUPABASE_RESPONSE" != "[]" ]; then
-    check_ok 0 "Supabase anon key works - can read data"
-    SUPABASE_OK=0
-    RECORD_COUNT=$(echo "$SUPABASE_RESPONSE" | jq 'length' 2>/dev/null || echo "0")
-    echo "  Records in database: $RECORD_COUNT"
+if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ]; then
+    SUPABASE_RESPONSE=$(curl -s "$SUPABASE_URL?select=os_name" \
+        -H "apikey: $SUPABASE_ANON_KEY" \
+        -H "Authorization: Bearer $SUPABASE_ANON_KEY" 2>/dev/null)
+    if [ -n "$SUPABASE_RESPONSE" ] && [ "$SUPABASE_RESPONSE" != "[]" ]; then
+        check_ok 0 "Supabase anon key works - can read data"
+        SUPABASE_OK=0
+        RECORD_COUNT=$(echo "$SUPABASE_RESPONSE" | jq 'length' 2>/dev/null || echo "0")
+        echo "  Records in database: $RECORD_COUNT"
+    else
+        echo "  [FAIL] Supabase anon key cannot read data"
+        SUPABASE_OK=1
+    fi
 else
-    echo "  [FAIL] Supabase anon key cannot read data"
+    echo "  [SKIP] Supabase check (config/.env missing)"
     SUPABASE_OK=1
 fi
 

@@ -6,9 +6,19 @@
 # Maps user-friendly OS names to integer codes for Supabase storage
 # The codes are transparent to the user - they just type/search OS names
 
-# Supabase credentials (configure these)
-SUPABASE_URL="https://fegfssihbiatpwkqovaq.supabase.co/rest/v1/list"
-SUPABASE_ANON_KEY="***REMOVED***"
+# Supabase credentials - loaded at runtime from config/.env (build host) or
+# /etc/osfinder.env (baked into the apkovl). Keep secrets OUT of git.
+SUPABASE_URL=""
+SUPABASE_ANON_KEY=""
+if [ -r /etc/osfinder.env ]; then
+    . /etc/osfinder.env
+elif [ -r "$(dirname "$0")/../config/.env" ]; then
+    . "$(dirname "$0")/../config/.env"
+fi
+if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+    echo "Missing SUPABASE_URL / SUPABASE_ANON_KEY (config/.env)" >&2
+    exit 1
+fi
 
 # Result temp file (one per process, reused across recursive calls)
 RESULTS_FILE="/tmp/osf_results_$$"
