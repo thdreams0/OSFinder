@@ -1,114 +1,125 @@
-# OSFinder - Bare Metal ISO Downloader
+# OSFinder
 
-A lightweight Text User Interface (TUI) tool for searching and downloading
-operating system ISOs from Supabase on computers without an OS installed.
+Uma ferramenta TUI (Text User Interface) leve que boota de USB e permite procurar,
+descarregar e montar ISOs de sistemas operativos em qualquer computador — incluindo
+máquinas sem SO instalado (bare metal). A biblioteca de ISOs é gerida no Supabase.
 
-## Philosophy
+## Como funciona
 
-OSFinder is designed to be:
-- **Bare-metal compatible**: Boots on any computer without an OS installed
-- **Lightweight**: Minimal Alpine Linux boots into RAM (~350MB USB footprint)
-- **TUI first**: ASCII-based text interface, no graphics dependencies
-- **Download-only**: Downloads ISOs from internet, doesn't persist on USB
-- **Supabase-backed**: Uses Supabase database for OS library management
+1. **Boot**: inseres a pen USB num computador e arrancas a partir dela.
+2. **Alpine em RAM**: um Alpine Linux mínimo arranca para a RAM (diskless) e abre a TUI automaticamente.
+3. **Rede**: se não houver internet, a TUI faz o setup sozinha — tenta ethernet (DHCP) e, se não houver, abre o assistente WiFi para ligares a uma rede.
+4. **Busca**: escreves parte do nome do OS (ex.: `ubuntu`, `cachyos`) e a TUI consulta o Supabase (correspondência parcial).
+5. **Download**: escolhes o resultado, o ISO é descarregado para `/tmp` (RAM) com barra de progresso.
+6. **Pós-download**: podes montar o ISO e abrir o instalador, copiá-lo para a pen, ou procurar outro OS.
 
-## How It Works
+Sem necessidade de internet no primeiro arranque: o `curl`, `jq`, `wpa_supplicant`, `iw` e
+as fontes de consola vêm embutidos no overlay — funciona em máquinas só-WiFi, sem ethernet.
 
-1. **Boot**: Insert USB into bare-metal computer and boot from it
-2. **Menu**: GRUB menu presents "OSFinder TUI"
-3. **Alpine**: A minimal Alpine Linux boots into RAM (diskless) and auto-starts the TUI
-4. **Search**: User types OS name (e.g., "ubuntu", "debian") or code number
-5. **Lookup**: Script queries Supabase `list` table for matching OS entries
-6. **Download**: `curl -L` downloads selected ISO to `/tmp/`
-7. **Progress**: ASCII progress bar shows download status
-8. **Result**: ISO available for installation (not saved on USB)
+## Estrutura
 
-## Supported OS (via Supabase)
-
-Currently configured with integer codes mapping to popular distributions:
-
-| Code | OS | Download Link |
-|------|-----|---------------|
-| 1 | Ubuntu 22.04 LTS | https://releases.ubuntu.com/22.04/ubuntu-22.04.1-desktop-amd64.iso |
-| 2 | Debian 12 AMD64 | https://cd.debian.org/disk1/debian-12.5.0-amd64-netinst.iso |
-| 3 | Fedora 38 AMD64 | https://download.fedoraproject.org/pub/fedora/linux/releases/38/Everything/x86_64/iso/Fedora-Server-dvd-38.iso |
-| 4 | Kali Linux Rolling | https://cdimage.kali.org/kali-2024.2/kali-linux-2024.2-amd64.iso |
-
-*To add more OS: Insert rows into Supabase `list` table and update OS_MAPPING() in osfinder.sh*
-
-## Requirements
-
-### Hardware
-- USB drive (128MB minimum, 2GB recommended)
-- BIOS or UEFI firmware (any modern computer)
-- Internet connection (required for ISO download)
-
-### Software (target computer, bare-metal)
-- BIOS or UEFI firmware
-- PXE-capable or USB-bootable firmware
-- Internet connection (required to boot Alpine and to download ISOs)
-- curl, jq, ncurses terminfo (installed automatically by Alpine at boot)
-- Alpine Linux (bundled on the USB, boots into RAM - diskless)
-
-### Development (this project)
-- Root/sudo access to create the bootable USB
-- GRUB (grub-install with i386-pc and x86_64-efi targets)
-- Supabase project with `list` table
-- curl, jq available on development machine
-
-## Installation
-
-### Create Bootable USB
-
-```bash
-# From the project directory (requires sudo)
-sudo ./installer.sh
+```
+OSFinder/
+├── src/osfinder.sh           # A TUI (menu, busca, download, WiFi)
+├── installer.sh              # Script de verificação/instalação (requer sudo)
+├── setup/
+│   ├── usb_setup.sh          # Cria a pen bootável do zero (apaga tudo!)
+│   ├── fix_pen.sh            # Atualiza uma pen existente (reconstrói o overlay)
+│   └── build_apkovl.sh       # Constrói só o overlay Alpine (apkovl)
+├── config/.env               # Credenciais Supabase (NÃO versionado)
+└── .website/index.html       # Página web opcional
 ```
 
-The installer lists available storage devices via `lsblk`, lets you pick
-the target USB, verifies the project, and creates the bootable USB with:
+## Criar a pen USB
 
-- GPT partition table (BIOS boot partition + FAT32 ESP/data partition)
-- GRUB bootloader (BIOS and UEFI)
-- Alpine Linux netboot kernel/initramfs/modules
-- `osfinder.sh` + config bundled as an Alpine `apkovl` overlay
+```bash
+# Do zero (apaga todos os dados da pen!)
+sudo bash setup/usb_setup.sh /dev/sdX
 
-**Warning**: This will erase all data on the specified USB drive!
+# Atualizar uma pen que já existe (após alterar osfinder.sh/config)
+sudo bash setup/fix_pen.sh /dev/sdX
+```
 
-### First Run
+Substitui `/dev/sdX` pela pen (ex.: `/dev/sdb`). **Atenção**: todo o conteúdo do
+dispositivo indicado é apagado.
 
-1. Insert USB into target computer and boot from it (F8, F12, Del, or F2)
-2. Select 'OSFinder TUI' in the GRUB menu
-3. Alpine Linux boots into RAM (diskless) and starts the OSFinder TUI automatically
-4. Type OS name (e.g., "ubuntu") or press number keys (1-4) for pre-configured OS
-5. Press Enter to search Supabase
-6. Select ISO from results list
-7. Download begins with progress bar
-8. ISO saved to `/tmp/` on completion
+Verificação do projeto (componentes, sintaxe, ligação ao Supabase):
 
-## Configuration
+```bash
+sudo bash installer.sh
+```
 
-Edit `config/.env` to customize:
-- `SUPABASE_URL`: Your Supabase project URL
-- `SUPABASE_ANON_KEY`: Your Supabase anonymous key
-- `MAX_ISO_MB`: Maximum expected ISO size
-- `DOWNLOAD_DIR`: Download directory path
+## Usar a TUI
 
-## Adding New OS to the Library
+No menu principal:
 
-1. Add row to Supabase `list` table:
-   - `os_name`: integer code (1, 2, 3, etc.)
-   - `link_to_download`: integer code (links mapped in osfinder.sh)
+```
+  1. Search and download an OS
+  2. Set up WiFi
+  3. Shell (for advanced users)
+  4. Power off
+```
 
-2. Update `OS_MAPPING()` function in `src/osfinder.sh`:
-   - Add case statement mapping code to download URL
+- **Sem internet ao arrancar**: a TUI tenta ethernet e depois abre o assistente WiFi sozinha.
+- **Busca**: digita parte do nome e Enter. Enter com o campo vazio volta atrás.
+  O resultado é escolhido pelo número.
+- **Download**: barra de progresso; o ISO fica em `/tmp/<nome>.iso` (memória RAM).
+- **Pós-download**:
+  1. *Mount the ISO* — monta em `/mnt/iso` e abre um shell para correres o instalador;
+  2. *Copy ISO to the pen* — grava o ISO na pen (marcada com `.boot_repository`);
+  3. *Search another OS* — nova busca.
+- **WiFi**: o assistente escaneia, lista as redes por número, pede a palavra-passe
+  (oculta) e guarda a configuração na pen (`etc/wpa_supplicant.conf`) para reconexão
+  automática no próximo arranque.
 
-3. Re-create bootable USB or copy updated `osfinder.sh`
+## Configuração
 
-## License
+Edita `config/.env` (mantido fora do git):
 
-MIT License - Free for personal and commercial use.
+```bash
+SUPABASE_URL="https://SEU_PROJETO.supabase.co/rest/v1/list"
+SUPABASE_ANON_KEY="a_tua_anon_key"
+```
 
-## Contact
+Ao construir a pen, estas credenciais são injetadas no overlay como `/etc/osfinder.env`.
 
-For issues, contributions, or questions, please refer to the project repository.
+## Adicionar OS à biblioteca
+
+Insere uma linha na tabela `list` do Supabase (colunas `os_name` e `link_to_download`):
+
+```sql
+INSERT INTO list (os_name, link_to_download) VALUES ('Ubuntu-24.04', 'https://.../ubuntu.iso');
+```
+
+A busca parcial e o download usam estas colunas diretamente — sem códigos nem mapeamento.
+
+## Requisitos
+
+### Para criar a pen
+- Linux com `sudo` (o setup usa `parted`/`sgdisk`-compatível, `grub-install`, `unsquashfs`, `curl`)
+- Pen USB com pelo menos 2 GB (a instalação Alpine + overlay ocupa < 400 MB)
+- Internet na máquina de build (para descarregar o Alpine netboot e as ferramentas)
+
+### Para arrancar (computador alvo)
+- Firmware BIOS ou UEFI com boot USB
+- RAM suficiente: o ISO é descarregado para `/tmp` (RAM). Com um ISO de 4 GB, precisas de
+  RAM livre equivalente (8 GB é confortável, 16 GB recomendado)
+- Internet para descarregar ISOs (WiFi ou ethernet)
+
+## Solução de problemas
+
+- **"Could not mount the ISO"**: a sessão live tenta carregar o módulo `loop` e criar
+  `/dev/loop*` automaticamente; se falhar, usa a opção *Copy ISO to the pen* e arranca a partir da pen.
+- **Sem internet e sem WiFi listado**: confirma que o firmware está com a interface sem fios
+  ativa; pode ser preciso ativar a placa no firmware.
+- **Boot preso no kernel / SATA não detetado**: corre `sudo bash setup/fix_pen.sh /dev/sdX`
+  (injeta `sd_mod`/`scsi_mod` no initramfs).
+- **Cores/estilo**: a TUI usa apenas verde (sucesso) e vermelho (erro); o resto é texto simples.
+- **Texto pequeno/grande**: a TUI escolhe automaticamente uma fonte de consola maior
+  conforme a resolução do monitor (via `setfont`).
+
+## Notas
+
+- O download vai para **RAM** (`/tmp`), nunca para a pen — nada fica persistido no PC alvo.
+- Não são necessários códigos numéricos: a busca é por nome (correspondência parcial).
+- As credenciais Supabase nunca são versionadas — vivem apenas em `config/.env`.

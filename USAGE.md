@@ -1,199 +1,196 @@
 # OSFinder - Como Usar (How to Use)
 
-## Introdução Rápida
+## O que é
 
-O OSFinder é uma ferramenta TUI (Text User Interface) leve que boota de USB e permite buscar e baixar ISOs de sistemas operacionais da internet via Supabase - ideal para computadores sem sistema operacional instalado.
+O OSFinder é uma TUI (Text User Interface) que arranca a partir de uma pen USB,
+boota um Alpine Linux mínimo para a RAM e permite procurar, descarregar e montar
+ISOs de sistemas operativos. Ideal para computadores sem SO instalado.
 
-## Pré-requisitos
+## Criar a pen USB
 
-### Para Criar o USB Bootable:
-- USB drive (mínimo 128MB, recomendado 2GB+)
-- Computador com Windows, Linux ou macOS para criar o USB
-- Syslinux instalado no MBR do USB
-
-### Para Rodar em Computadores Sem OS:
-- Qualquer computador com BIOS ou UEFI
-- Conexão com internet (necessária para baixar ISOs)
-- Suporte bootável de USB no firmware do computador
-
-## Passo a Passo: Criar o USB Bootable
-
-### Opção 1: Usando o script automatizado
+### Do zero
 
 ```bash
-# Do diretório do projeto
-chmod +x setup/usb_setup.sh
-./setup/usb_setup.sh /dev/sdX
+# Do diretório do projeto (requer sudo)
+sudo bash setup/usb_setup.sh /dev/sdX
 ```
 
-Substitua `/dev/sdX` pelo seu dispositivo USB (ex: `/dev/sdb`, `/dev/sdc`).
+Substitui `/dev/sdX` pela pen (ex.: `/dev/sdb`).
+**Atenção**: todos os dados no dispositivo são apagados.
 
-**Atenção**: Isso apagará todos os dados no USB.
+### Atualizar uma pen que já existe
 
-### Opção 2: Manual (se o script falhar)
+Depois de alterares o `src/osfinder.sh` ou o `config/.env`, reconstrói o overlay
+sem ter de recriar a pen do zero:
 
-1. Formate o USB em FAT32
-2. Instale sysloader no MBR:
-   ```bash
-   dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/mbr/mbr.bin of=/dev/sdX
-   ```
-3. Copie os arquivos do OSFinder para o USB:
-   - `osfinder.sh`
-   - `.env` (com credenciais Supabase)
-   - `syslinux.cfg`
-   - `boot/grub/grub.cfg`
-4. Reinicie o computador e bootie do USB
-
-## Como Usar o OSFinder
-
-### 1. Boot do Computador
-
-Insira o USB e reinicie o computador. Entre no firmware (BIOS/UEFI) geralmente com:
-- **F8**, **F12**, **Del** ou **F2** para menu de boot
-- Selecione o dispositivo USB
-
-### 2. TUI Interface
-
-Ao bootar, aparecerá um menu ASCII do OSFinder:
-
-```
-  ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-
-OSFinder TUI - Bare Metal ISO Downloader
-
-Search and download operating system ISOs
-
-Press Enter to search, numbers to select
+```bash
+sudo bash setup/fix_pen.sh /dev/sdX
 ```
 
-### 3. Search de OS
+### Verificar o projeto
 
-Você tem duas opções:
-
-**Opção A - Digitar nome:**
-```
-Search OS> ubuntu
+```bash
+sudo bash installer.sh
 ```
 
-**Opção B - Usar códigos numéricos:**
-```
-1. Ubuntu 22.04 LTS
-2. Debian 12 AMD64
-3. Fedora 38 AMD64
-4. Kali Linux Rolling
-```
+Verifica a sintaxe da TUI, a presença de `website/index.html`, a ligação ao
+Supabase e a documentação.
 
-Digite o número correspondente e pressione Enter.
+## Arranque no computador alvo
 
-### 4. Baixar ISO
+1. Insere a pen e arranca a partir dela (tecla de boot: **F8**, **F12**, **Del** ou **F2**).
+2. No menu GRUB, escolhe a entrada do OSFinder.
+3. O Alpine arranca para a RAM e a TUI abre automaticamente no ecrã.
 
-O script vai:
-1. Consultar o Supabase pela busca
-2. Mostrar resultados disponíveis
-3. Baixar o ISO selecionado via `curl -L`
+## A TUI
 
-Durante o download, aparecerá uma progress bar ASCII:
+### Menu principal
 
 ```
-▌▌▌▌▌▌▌▌▌▌░░░░░ 45%
+========================================
+OSFinder - Download and install an OS
+========================================
+Internet: Connected / OFF
+
+  1. Search and download an OS
+  2. Set up WiFi
+  3. Shell (for advanced users)
+  4. Power off
 ```
 
-### 5. Pós-Download
+O estado da internet aparece no topo (verde = ligado, vermelho = desligado).
 
-Após o download concluir:
-- ISO salva em `/tmp/ nome-do-sistema.iso`
-- Mensagem de sucesso aparece
-- Pressione Enter para retornar ao menu
-- Pode fazer nova busca ou desligar o computador
+### Rede automática
 
-## Exemplos Práticos
+- **Sem internet ao arrancar**: a TUI tenta ethernet (DHCP) e, se não resultar,
+  abre o assistente WiFi para ligares manualmente. Se recusares, podes ligar mais
+  tarde com a opção **2. Set up WiFi**.
 
-### Exemplo 1: Baixar Ubuntu 22.04
+### Assistente WiFi
 
-1. Boot do USB → OSFinder TUI aparece
-2. Digite `1` ou `ubuntu` e aperte Enter
-3. Veja "Ubuntu 22.04 LTS" nos resultados
-4. Confirme a seleção (número correspondente)
-5. Assistir progress bar do download
-6. Quando terminar: ISO em `/tmp/ubuntu-22.04.1-desktop-amd64.iso`
-7. Use esse ISO para criar mídia de instalação ou bootar via QEMU
+1. A TUI escaneia as redes disponíveis.
+2. Escolhe uma rede pelo **número** (ou escreve o nome).
+3. Digita a palavra-passe (fica oculta).
+4. Se a senha estiver errada, podes tentar novamente.
+5. A configuração é **guardada na pen** (`etc/wpa_supplicant.conf`) e a TUI
+   reconecta automaticamente nos próximos arranques, se não houver ethernet.
 
-### Exemplo 2: Baixar Debian 12
+### Procurar e descarregar um OS
 
-1. Boot do USB → OSFinder TUI aparece
-2. Digite `2` ou `debian` e aperte Enter
-3. Selecione no results list
-4. Download via curl começa automaticamente
-5. ISO salva em `/tmp/debian-12.5.0-amd64-netinst.iso`
+Escolhe a opção **1** no menu. Depois:
+
+```
+What do you want to install?
+Type part of the name (e.g. ubuntu, debian, cachyos)
+Press Enter with nothing typed to go back.
+
+Search> ubuntu
+```
+
+- A busca é **parcial** (por nome): `ubuntu` encontra qualquer entrada que contenha "ubuntu".
+- **Enter com o campo vazio** volta ao menu.
+- Com resultados, aparece uma lista numerada:
+
+```
+Available results:
+---------------------
+  1. Ubuntu-22.04
+---------------------
+Type the number to download
+Select> 1
+```
+
+- O download mostra uma **barra de progresso** e guarda o ISO em `/tmp/<nome>.iso` (RAM).
+
+### Pós-download
+
+```
+Download complete: /tmp/ubuntu-22.04.iso
+
+What next?
+  1. Mount the ISO and open the installer
+  2. Copy the ISO to the USB pen
+  3. Search another OS
+```
+
+- **1 — Mount the ISO**: monta o ISO em `/mnt/iso` e abre um shell. Procura o
+  instalador lá dentro (ex.: `./install*`, `casper`, `ubiquity`, `calamares`) e
+  corre-o. Escreve `exit` para voltar à TUI.
+- **2 — Copy ISO to the pen**: grava o ISO na pen (a pen é detetada pelo marcador
+  `.boot_repository`) para arrancar noutra máquina.
+- **3 — Search another OS**: volta à busca.
+
+### Shell (avançado)
+
+A opção **3** abre um shell no Alpine live (utilidade para diagnosticar rede,
+partições, etc.). Escreve `exit` para voltar à TUI.
+
+### Desligar
+
+A opção **4** desliga o computador.
+
+## Adicionar OS à biblioteca
+
+Os ISOs são guardados no Supabase, na tabela `list`:
+
+| Coluna            | Exemplo                                    |
+|-------------------|--------------------------------------------|
+| `os_name`         | `Ubuntu-22.04`                             |
+| `link_to_download`| `https://releases.ubuntu.com/.../ubuntu.iso` |
+
+```sql
+INSERT INTO list (os_name, link_to_download) VALUES ('Debian-12', 'https://.../debian.iso');
+```
+
+Não há códigos nem mapeamento: a busca parcial e o download usam estas colunas diretamente.
 
 ## Configuração
 
-### Editar Credenciais Supabase
+### Credenciais Supabase
 
-Edite `config/.env`:
+Edita `config/.env` (fora do git):
 
 ```bash
 SUPABASE_URL="https://SEU_PROJETO.supabase.co/rest/v1/list"
-SUPABASE_ANON_KEY="sb_secret_SUA_CHAVE_ANAN"
+SUPABASE_ANON_KEY="a_tua_anon_key"
 ```
 
-### Adicionar Novos ISOs na Base de Dados
+Ao criar/atualizar a pen, as credenciais são injetadas no overlay como
+`/etc/osfinder.env`, usadas pela TUI em runtime.
 
-1. Acesse seu projeto Supabase
-2. Vá ao SQL Editor
-3. Insira nova linha na tabela `list`:
-   ```sql
-   INSERT INTO list (os_name, link_to_download) VALUES (5, 5);
-   -- Code 5 = novo ISO mapeado em osfinder.sh
-   ```
-4. Atualize a função `OS_MAPPING()` em `src/osfinder.sh` para code 5
+## Solução de problemas
 
-## Solução de Problemas
+### "Could not mount the ISO"
+A TUI tenta carregar o módulo `loop` e criar os devices `/dev/loop*`. Se mesmo assim
+falhar, usa a opção **2. Copy the ISO to the USB pen** e arranca a partir da pen.
 
-### "Nenhum resultado encontrado"
-
-- Verifique se digitou corretamente (case-insensitive no Supabase)
-- Certifique-se de que o ISO está na tabela `list`
-- Tente códigos numéricos: `1`, `2`, `3`, `4`
+### Sem resultados na busca
+- Confirma que o nome corresponde a uma entrada da tabela `list` (busca parcial).
+- Verifica a ligação (o estado `Internet` no topo).
+- Confirma que `config/.env` tem as credenciais corretas.
 
 ### Download falha
+- Verifica a internet (WiFi/ethernet).
+- Confirma que `link_to_download` da entrada aponta para um URL válido.
 
-- Verifique conexão com internet
-- Confira se o URL da tabela `link_to_download` está correto
-- O ISO pode ser muito grande para a conexão
+### SATA / disco não detetado no boot
+Corre `sudo bash setup/fix_pen.sh /dev/sdX` — o script injeta `sd_mod`/`scsi_mod`
+no initramfs para discos SATA.
 
-### USB não boota
+### Texto pequeno ou grande
+A TUI deteta a resolução do monitor e escolhe uma fonte de consola maior
+(por exemplo `sun12x22` em ecrãs 1080p, `solar24x32` em 1440p+).
 
-- Verifique se sysinstall foi instalado corretamente no MBR
-- Confirme se o USB está em FAT32
-- Tente reinstalar com o script `setup/usb_setup.sh`
+## Notas importantes
 
-### TUI não aparece direito
-
-- O terminal precisa suportar `tput` e `ncurses`
-- Variáveis de ambiente: `export TERM=dumb`
-- Em alguns firmware antigos, pode precisar de `setterm`
-
-## Notas Importantes
-
-- ✅ **Não salva ISOs no USB**: O download vai para `/tmp/` do computador alvo
-- ✅ **Conexão obrigatória**: Internet necessária para cada uso
-- ✅ **Compatible**: BIOS legacy e UEFI
-- ✅ **Tamanho pequeno**: < 5MB no USB total
-- ⚠️ **ISO size varia**: De 500MB a 5GB+ - certifique-se de espaço em disco
-
-## Comandos Rápidos
-
-| Ação | Tecla/Comando |
-|------|--------------|
-| Search OS name | Digite e Enter |
-| Selecionar ISO 1 | Pressione `1` e Enter |
-| Selecionar ISO 2 | Pressione `2` e Enter |
-| Selecionar ISO 3 | Pressione `3` e Enter |
-| Selecionar ISO 4 | Pressione `4` e Enter |
-| Nova search | Enter vazio no prompt |
-| Sair do programa | Reiniciar ou desligar |
+- ✅ **Não grava ISOs na pen automaticamente**: o download vai para `/tmp` (RAM).
+- ✅ **Sem internet no 1º boot**: as ferramentas necessárias vêm embutidas no overlay.
+- ✅ **WiFi funciona sem ethernet**: assistente integrado + reconexão automática.
+- ✅ **BIOS legacy e UEFI** suportados (GRUB).
+- ⚠️ **RAM**: ISOs grandes precisam de RAM livre em `/tmp` (tmpfs). Com ISOs de
+  vários GB, recomenda-se 8–16 GB de RAM no computador alvo.
+- ⚠️ **Credenciais**: nunca versionadas; vivem apenas em `config/.env`.
 
 ---
 
-**OSFinder** - Download ISOs bare-metal friendly via Supabase TUI.
+**OSFinder** - Descarrega ISOs bare-metal friendly via Supabase.
