@@ -98,4 +98,4 @@ See [**USAGE.md**](https://github.com/thdreams0/OSFinder/blob/733da91b2c60f41dca
 
 ---
 
-**OSFinder** - Download and install an OS on any bare-metal computer.
+Search for an .iso in our list and download it, without an OS on your computer.
