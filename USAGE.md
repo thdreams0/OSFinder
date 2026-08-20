@@ -16,6 +16,15 @@ You need: a Linux computer and a USB pen (2 GB or more).
 ### Create it from scratch
 
 ```bash
+sudo bash installer.sh
+```
+
+The installer lists the available disks, checks the project files, asks for
+confirmation and creates the bootable pen for you.
+
+If you already know the device name, you can use the setup script directly:
+
+```bash
 sudo bash setup/usb_setup.sh /dev/sdX
 ```
 

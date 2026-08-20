@@ -31,6 +31,15 @@ Boot the pen and you land in a simple menu:
 ### 1. Create the USB pen (on any Linux PC)
 
 ```bash
+sudo bash installer.sh
+```
+
+The installer lists the available disks, checks the project, asks for confirmation
+and creates the bootable pen for you.
+
+If you already know the device name, you can use the setup script directly:
+
+```bash
 sudo bash setup/usb_setup.sh /dev/sdX
 ```
 
