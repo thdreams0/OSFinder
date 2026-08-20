@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSFinder — Download an OS without one</title>
+<meta name="description" content="Search for an .iso in our list and download it, without an OS on your computer. Boot from USB, pick an OS, done.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-soft: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --red: #f85149;
+    --accent: #58a6ff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Nav */
+  nav {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(13,17,23,.9); backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--border);
+  }
+  nav .container { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+  .logo { font-weight: 700; font-size: 1.1rem; }
+  .logo span { color: var(--accent); }
+  nav ul { display: flex; gap: 20px; list-style: none; }
+  nav ul a { color: var(--muted); font-size: .9rem; }
+  nav ul a:hover { color: var(--text); text-decoration: none; }
+
+  /* Hero */
+  .hero { padding: 90px 0 70px; text-align: center; }
+  .badge {
+    display: inline-block; padding: 4px 12px; margin-bottom: 20px;
+    border: 1px solid var(--green); color: var(--green);
+    border-radius: 999px; font-size: .8rem;
+  }
+  .hero h1 { font-size: 2.6rem; line-height: 1.2; margin-bottom: 18px; }
+  .hero h1 em { color: var(--accent); font-style: normal; }
+  .hero p { color: var(--muted); font-size: 1.15rem; max-width: 620px; margin: 0 auto 30px; }
+  .btn {
+    display: inline-block; padding: 12px 26px; border-radius: 8px;
+    font-weight: 600; margin: 0 8px 8px;
+  }
+  .btn-primary { background: var(--accent); color: #0d1117; }
+  .btn-primary:hover { opacity: .9; text-decoration: none; }
+  .btn-ghost { border: 1px solid var(--border); color: var(--text); }
+  .btn-ghost:hover { background: var(--bg-soft); text-decoration: none; }
+
+  /* Terminal mock */
+  .terminal {
+    max-width: 640px; margin: 50px auto 0; text-align: left;
+    background: #010409; border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .85rem;
+  }
+  .terminal-bar { display: flex; gap: 6px; padding: 10px 14px; background: var(--bg-soft); border-bottom: 1px solid var(--border); }
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .dot.r { background: var(--red); } .dot.y { background: #d29922; } .dot.g { background: var(--green); }
+  .terminal pre { padding: 16px 18px; overflow-x: auto; }
+  .c-green { color: var(--green); } .c-red { color: var(--red); } .c-muted { color: var(--muted); } .c-accent { color: var(--accent); }
+
+  /* Sections */
+  section { padding: 60px 0; border-top: 1px solid var(--border); }
+  h2 { font-size: 1.7rem; margin-bottom: 8px; }
+  .sub { color: var(--muted); margin-bottom: 34px; }
+
+  /* Steps */
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+  .step { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px; padding: 22px; }
+  .step .num { font-size: .8rem; color: var(--accent); font-weight: 700; }
+  .step h3 { font-size: 1.05rem; margin: 6px 0 8px; }
+  .step p { color: var(--muted); font-size: .92rem; }
+  .step code { background: #010409; padding: 1px 6px; border-radius: 5px; font-size: .82rem; }
+
+  /* Features */
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+  .feat { border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .feat h3 { font-size: 1rem; margin-bottom: 6px; }
+  .feat h3 .mat-icon {
+    vertical-align: -4px; margin-right: 8px; color: var(--accent);
+    font-size: 1.3rem;
+  }
+  .feat p { color: var(--muted); font-size: .9rem; }
+
+  /* OS list */
+  #oslist { background: var(--bg-soft); }
+  .searchbox {
+    width: 100%; max-width: 480px; padding: 12px 16px; margin-bottom: 24px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-size: 1rem;
+  }
+  .oslist { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .oscard {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px;
+  }
+  .oscard .name { font-weight: 600; }
+  .oscard .url { color: var(--muted); font-size: .78rem; word-break: break-all; }
+  .oscard a { white-space: nowrap; }
+  .empty { color: var(--muted); padding: 20px 0; }
+
+  /* FAQ */
+  details { border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin-bottom: 12px; background: var(--bg-soft); }
+  summary { cursor: pointer; font-weight: 600; }
+  details p { color: var(--muted); margin-top: 10px; font-size: .95rem; }
+
+  footer { padding: 40px 0 60px; text-align: center; color: var(--muted); font-size: .9rem; border-top: 1px solid var(--border); }
+
+  @media (max-width: 600px) {
+    nav ul { display: none; }
+    .hero h1 { font-size: 1.9rem; }
+    .hero { padding: 60px 0 40px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <div class="logo">OS<span>Finder</span></div>
+    <ul>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#oslist">OS list</a></li>
+      <li><a href="#faq">FAQ</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero container">
+  <div class="badge">Free &amp; open source</div>
+  <h1>Search for an <em>.iso</em> in our list and download it, <em>without an OS</em> on your computer.</h1>
+  <p>Boot OSFinder from a USB stick on any machine — even a blank one — and download
+  the operating system you want with a simple text menu. No installation, no graphics, no fuss.</p>
+  <a class="btn btn-primary" href="#how">How it works</a>
+  <a class="btn btn-ghost" href="#oslist">Browse the OS list</a>
+
+  <div class="terminal">
+    <div class="terminal-bar">
+      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+    </div>
+    <pre><span class="c-accent">OSFinder</span> — Download and install an OS
+<span class="c-green">Internet:</span> Connected
+
+  1. Search and download an OS
+  2. Set up WiFi
+  3. Shell (for advanced users)
+  4. Power off
+
+<span class="c-muted">Choose an option&gt;</span> 1
+<span class="c-muted">Search&gt;</span> ubuntu
+  <span class="c-accent">1.</span> Ubuntu-22.04
+<span class="c-muted">Select&gt;</span> 1
+
+<span class="c-green">[=====================              ] 45%</span></pre>
+  </div>
+</header>
+
+<section id="how">
+  <div class="container">
+    <h2>How it works</h2>
+    <p class="sub">Three steps between you and a fresh operating system.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="num">STEP 1</div>
+        <h3>Create the USB pen</h3>
+        <p>On any Linux PC run <code>sudo bash installer.sh</code> and pick your pen. It checks the project and builds the bootable drive for you.</p>
+      </div>
+      <div class="step">
+        <div class="num">STEP 2</div>
+        <h3>Boot any computer</h3>
+        <p>Plug the pen in, boot from it (BIOS or UEFI), and Alpine Linux loads into RAM. The menu appears automatically.</p>
+      </div>
+      <div class="step">
+        <div class="num">STEP 3</div>
+        <h3>Search &amp; download</h3>
+        <p>Type part of an OS name, pick a result, and the ISO downloads to RAM with a live progress bar. Mount it and run the installer right away.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="container">
+    <h2>Why OSFinder</h2>
+    <p class="sub">Built for bare-metal machines and first-time installs.</p>
+    <div class="features">
+      <div class="feat"><h3><span class="mat-icon material-symbols-outlined">memory</span>No OS required</h3><p>Runs on computers with nothing installed — just the USB pen and internet.</p></div>
+      <div class="feat"><h3><span class="mat-icon material-symbols-outlined">wifi</span>WiFi out of the box</h3><p>Built-in WiFi wizard with automatic reconnection. No ethernet needed.</p></div>
+      <div class="feat"><h3><span class="mat-icon material-symbols-outlined">rocket_launch</span>Boots into RAM</h3><p>Alpine Linux runs entirely in RAM, so nothing touches the target disk until you install.</p></div>
+      <div class="feat"><h3><span class="mat-icon material-symbols-outlined">monitoring</span>Live progress bar</h3><p>Real download progress, not a silent wait. ISOs land in RAM for instant use.</p></div>
+      <div class="feat"><h3><span class="mat-icon material-symbols-outlined">build</span>Install from the ISO</h3><p>Mount the downloaded ISO and open its installer (casper, calamares, ubiquity…) from a shell.</p></div>
+      <div class="feat"><h3><span class="mat-icon material-symbols-outlined">computer</span>BIOS &amp; UEFI</h3><p>Boots on legacy BIOS and modern UEFI machines alike.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="oslist">
+  <div class="container">
+    <h2>OS list</h2>
+    <p class="sub">A public list anyone can read and contribute to. Live from the repository.</p>
+    <input id="search" class="searchbox" type="search" placeholder="Filter OS… (e.g. ubuntu)">
+    <div id="oslist-container" class="oslist"><div class="empty">Loading…</div></div>
+    <p class="empty" id="oslist-empty" style="display:none">No OS matches that name.</p>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="container">
+    <h2>FAQ</h2>
+    <p class="sub">Quick answers to common questions.</p>
+
+    <details>
+      <summary>Do I need an OS on the computer to use OSFinder?</summary>
+      <p>No. That's the whole point — OSFinder boots from USB and works on completely empty machines.</p>
+    </details>
+    <details>
+      <summary>Where does the ISO get saved?</summary>
+      <p>To RAM (<code>/tmp</code>). Nothing is written to the pen or the target disk unless you choose to copy the ISO to the pen.</p>
+    </details>
+    <details>
+      <summary>What if there's no internet?</summary>
+      <p>OSFinder tries ethernet automatically, then guides you through the WiFi wizard. Networks you connect to are remembered on the pen.</p>
+    </details>
+    <details>
+      <summary>How much RAM do I need?</summary>
+      <p>Enough for the ISO size while downloading — 8 GB is comfortable, 16 GB recommended for large ISOs.</p>
+    </details>
+    <details>
+      <summary>Can I add an OS to the list?</summary>
+      <p>Yes — the list is a public JSON file in the repository. Anyone can contribute to it.</p>
+    </details>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    OSFinder · Download and install an OS on any bare-metal computer.
+  </div>
+</footer>
+
+<script>
+  const LIST_URL = "https://raw.githubusercontent.com/thdreams0/OSFinder/main/oslist.json";
+  const LIST_FALLBACK = "https://cdn.jsdelivr.net/gh/thdreams0/OSFinder@main/oslist.json";
+
+  let all = [];
+
+  async function loadList() {
+    const box = document.getElementById("oslist-container");
+    const empty = document.getElementById("oslist-empty");
+    let data = null;
+    for (const url of [LIST_URL, LIST_FALLBACK]) {
+      try {
+        const res = await fetch(url);
+        if (res.ok) { data = await res.json(); break; }
+      } catch (e) { /* try next */ }
+    }
+    if (!data || !Array.isArray(data)) {
+      box.innerHTML = '<div class="empty">Could not load the list. Try again later.</div>';
+      return;
+    }
+    all = data;
+    render("");
+  }
+
+  function render(q) {
+    const box = document.getElementById("oslist-container");
+    const empty = document.getElementById("oslist-empty");
+    const ql = q.toLowerCase();
+    const items = all.filter(o => o.name.toLowerCase().includes(ql));
+    empty.style.display = items.length ? "none" : "block";
+    box.innerHTML = items.map(o => `
+      <div class="oscard">
+        <div><div class="name"></div><div class="url"></div></div>
+        <a href="${o.url}" target="_blank" rel="noopener">Download ↗</a>
+      </div>`).join("");
+    items.forEach((o, i) => {
+      box.children[i].querySelector(".name").textContent = o.name;
+      box.children[i].querySelector(".url").textContent = o.url;
+    });
+  }
+
+  document.getElementById("search").addEventListener("input", e => render(e.target.value));
+  loadList();
+</script>
+
+</body>
+</html>

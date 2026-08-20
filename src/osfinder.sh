@@ -7,8 +7,8 @@
 # (oslist.json), served via jsDelivr CDN with a GitHub raw fallback.
 
 # Public OS list (name|url entries). No credentials needed - anyone can view.
-OS_LIST_URL="https://cdn.jsdelivr.net/gh/thdreams0/OSFinder@main/oslist.json"
-OS_LIST_FALLBACK_URL="https://raw.githubusercontent.com/thdreams0/OSFinder/main/oslist.json"
+OS_LIST_URL="https://raw.githubusercontent.com/thdreams0/OSFinder/main/oslist.json"
+OS_LIST_FALLBACK_URL="https://cdn.jsdelivr.net/gh/thdreams0/OSFinder@main/oslist.json"
 
 # Result temp file (one per process, reused across recursive calls)
 RESULTS_FILE="/tmp/osf_results_$$"
