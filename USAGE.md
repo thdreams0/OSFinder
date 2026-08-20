@@ -2,47 +2,44 @@
 
 ## What it is
 
-OSFinder is a TUI (Text User Interface) that boots from a USB pen, loads a minimal
-Alpine Linux into RAM and lets you search, download and mount operating system ISOs.
-Ideal for computers without an OS installed.
+OSFinder is a bootable tool that lets you search for, download and run operating
+system installers from any computer — even one with no OS installed. It runs from a
+USB pen: Alpine Linux loads into RAM and a text menu appears automatically.
 
-## Creating the USB pen
+You don't need an existing operating system, a hard drive, or a graphics environment.
+Just the pen and an internet connection.
 
-### From scratch
+## Part 1 - Creating the USB pen
+
+You need: a Linux computer and a USB pen (2 GB or more).
+
+### Create it from scratch
 
 ```bash
-# From the project directory (requires sudo)
 sudo bash setup/usb_setup.sh /dev/sdX
 ```
 
-Replace `/dev/sdX` with your pen (e.g. `/dev/sdb`).
-**Warning**: all data on the device is erased.
+Replace `/dev/sdX` with your pen (e.g. `/dev/sdb`). **Warning**: everything on that
+device is erased.
 
-### Updating an existing pen
+### Update an existing pen
 
-After changing `src/osfinder.sh` or `oslist.json`, rebuild the overlay without
-recreating the pen from scratch:
+Newer versions of OSFinder? Rebuild the pen without recreating it:
 
 ```bash
 sudo bash setup/fix_pen.sh /dev/sdX
 ```
 
-### Verifying the project
+## Part 2 - Booting
 
-```bash
-sudo bash installer.sh
-```
+1. Plug the pen into the computer.
+2. Restart and open the boot menu (usually **F8**, **F12**, **Del** or **F2**).
+3. Select the USB pen.
+4. In the GRUB menu, pick the OSFinder entry.
 
-Checks the TUI syntax, the presence of the project files, the OS list (`oslist.json`)
-and the documentation.
+Alpine Linux boots into RAM and the OSFinder menu appears on screen.
 
-## Booting on the target computer
-
-1. Plug in the pen and boot from it (boot key: **F8**, **F12**, **Del** or **F2**).
-2. In the GRUB menu, pick the OSFinder entry.
-3. Alpine boots into RAM and the TUI opens automatically on screen.
-
-## The TUI
+## Part 3 - Using the menu
 
 ### Main menu
 
@@ -58,26 +55,27 @@ Internet: Connected / OFF
   4. Power off
 ```
 
-The internet status is shown at the top (green = connected, red = off).
+The **Internet** status at the top shows whether you're connected
+(green = connected, red = off).
 
-### Automatic network setup
+### Getting online (automatic)
 
-- **No internet at boot**: the TUI tries ethernet (DHCP) and, if that doesn't work,
-  opens the WiFi wizard for you to connect manually. If you decline, you can connect
-  later with **2. Set up WiFi**.
+If there's no internet, OSFinder tries ethernet (DHCP) first. If that fails, it opens
+the **WiFi wizard** so you can connect. If you skip it, you can always use option
+**2. Set up WiFi**.
 
-### WiFi wizard
+### Connecting to WiFi
 
-1. The TUI scans the available networks.
-2. Pick a network by **number** (or type its name).
+1. OSFinder scans for available networks.
+2. Pick a network by its **number** (or type the name).
 3. Type the password (it stays hidden).
-4. If the password is wrong, you can try again.
-5. The config is **saved on the pen** (`etc/wpa_supplicant.conf`) and the TUI
-   reconnects automatically on later boots, when there's no ethernet.
+4. Wrong password? Try again.
+5. The network is **saved on the pen** and reconnects automatically on later boots
+   when there's no ethernet.
 
 ### Searching and downloading an OS
 
-Pick option **1** in the menu. Then:
+Choose option **1**. Then:
 
 ```
 What do you want to install?
@@ -87,9 +85,9 @@ Press Enter with nothing typed to go back.
 Search> ubuntu
 ```
 
-- The search is **partial** (by name): `ubuntu` matches any entry containing "ubuntu".
+- Search is by **name** and matches partial words: `ubu` finds Ubuntu, `cachy` finds CachyOS.
 - **Enter with an empty field** goes back to the menu.
-- With results, a numbered list appears:
+- Results appear as a numbered list:
 
 ```
 Available results:
@@ -100,9 +98,10 @@ Type the number to download
 Select> 1
 ```
 
-- The download shows a **progress bar** and stores the ISO at `/tmp/<name>.iso` (RAM).
+- Type the number and press Enter. The ISO downloads with a **progress bar** and is
+  stored in RAM (`/tmp`).
 
-### Post-download
+### After the download
 
 ```
 Download complete: /tmp/ubuntu-22.04.iso
@@ -113,79 +112,67 @@ What next?
   3. Search another OS
 ```
 
-- **1 — Mount the ISO**: mounts the ISO at `/mnt/iso` and opens a shell. Look for
-  the installer inside (e.g. `./install*`, `casper`, `ubiquity`, `calamares`) and
-  run it. Type `exit` to return to the TUI.
-- **2 — Copy ISO to the pen**: writes the ISO to the pen (detected by the
-  `.boot_repository` marker) to boot on another machine.
-- **3 — Search another OS**: returns to the search.
+- **1 — Mount the ISO and open the installer**: mounts the ISO and opens a shell.
+  Look for the installer inside (for example `./install*`, `casper`, `ubiquity` or
+  `calamares`) and run it. Type `exit` to return to OSFinder.
+- **2 — Copy the ISO to the pen**: saves the ISO onto the pen so you can boot it on
+  another machine.
+- **3 — Search another OS**: start a new search.
 
-### Shell (advanced)
+### Shell (advanced users)
 
-Option **3** opens a shell in the Alpine live environment (useful for diagnosing
-network, partitions, etc.). Type `exit` to return to the TUI.
+Option **3** opens a shell in the live Alpine environment. Useful for checking the
+network, disks, etc. Type `exit` to return to the menu.
 
 ### Power off
 
 Option **4** shuts down the computer.
 
-## Adding an OS to the library
+## Requirements
 
-ISOs are stored in a public JSON file in this repository, `oslist.json`:
+### To create the pen
+- A Linux computer with `sudo`
+- A USB pen with at least 2 GB
 
-```json
-[
-  { "name": "Ubuntu-22.04", "url": "https://releases.ubuntu.com/.../ubuntu.iso" },
-  { "name": "Debian-12", "url": "https://.../debian.iso" }
-]
-```
-
-Anybody can view the list. To add an OS, edit `oslist.json` and open a pull request
-(or commit on `main`). The TUI fetches the file from the jsDelivr CDN (fallback:
-GitHub raw) and filters it locally by name — no codes, no mapping, no credentials.
-
-The list URL used by the TUI is defined in `src/osfinder.sh` (`OS_LIST_URL` and
-`OS_LIST_FALLBACK_URL`) — point them at your own fork if you host your own list.
-
-## Configuration
-
-There is nothing to configure for the OS list: it is a public file, no API keys
-needed. If you fork the repository, update the two list URLs in `src/osfinder.sh`
-before building the pen.
+### To boot and use it
+- A computer that boots from USB (BIOS legacy or UEFI)
+- An internet connection (WiFi or ethernet)
+- Enough RAM: ISOs are stored in RAM while downloading. For large ISOs, 8 GB is
+  comfortable and 16 GB is recommended.
 
 ## Troubleshooting
 
 ### "Could not mount the ISO"
-The TUI tries to load the `loop` module and create the `/dev/loop*` devices. If it
-still fails, use **2. Copy the ISO to the USB pen** and boot from the pen.
+OSFinder tries to load the loop device automatically. If it still fails, use option
+**2. Copy the ISO to the USB pen** and boot from the pen instead.
 
 ### No results on search
-- Check the name matches an entry in `oslist.json` (partial search).
-- Check the connection (the `Internet` status at the top).
-- Check the list URLs in `src/osfinder.sh` are reachable (CDN / GitHub raw).
+- Check the name you typed matches a listed OS (search is partial, so short words work).
+- Check the internet status at the top of the menu.
 
 ### Download fails
-- Check the internet (WiFi/ethernet).
-- Check that the entry's `url` points to a valid URL.
+- Check your internet connection (WiFi or ethernet).
+- Try again — sometimes mirrors are slow.
 
 ### SATA / disk not detected at boot
-Run `sudo bash setup/fix_pen.sh /dev/sdX` — the script injects `sd_mod`/`scsi_mod`
-into the initramfs for SATA disks.
+Run `sudo bash setup/fix_pen.sh /dev/sdX` on your Linux PC — this injects the SATA
+drivers (`sd_mod`/`scsi_mod`) into the boot files.
+
+### No WiFi networks listed
+Some computers keep the wireless card disabled. Enable it in the firmware
+(BIOS/UEFI) and reboot.
 
 ### Text too small or too big
-The TUI detects the monitor resolution and picks a larger console font
-(e.g. `sun12x22` on 1080p screens, `solar24x32` on 1440p+).
+OSFinder picks a larger console font automatically based on the monitor resolution.
+Nothing to configure.
 
-## Important notes
+## Good to know
 
-- The download goes to **RAM** (`/tmp`), never to the pen automatically.
-- No internet needed on 1st boot: the required tools are bundled in the overlay.
-- WiFi works without ethernet: built-in wizard + automatic reconnection.
-- BIOS legacy and UEFI supported (GRUB).
-- RAM: large ISOs need free RAM in `/tmp` (tmpfs). For multi-GB ISOs,
-  8–16 GB of RAM on the target computer is recommended.
-- No credentials: the OS list is a public file anyone can view and contribute to.
+- The downloaded ISO goes to **RAM**, not to the pen — nothing is saved on the target
+  computer unless you choose "Copy the ISO to the pen".
+- WiFi works without ethernet.
+- Works on BIOS (legacy) and UEFI.
 
 ---
 
-**OSFinder** - Bare-metal friendly ISO downloads from a public GitHub list.
+**OSFinder** - Download and install an OS on any bare-metal computer.
