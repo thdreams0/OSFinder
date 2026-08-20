@@ -215,6 +215,7 @@
     <h2>OS list</h2>
     <p class="sub">A public list anyone can read and contribute to. Live from the repository.</p>
     <input id="search" class="searchbox" type="search" placeholder="Filter OS… (e.g. ubuntu)">
+    <p class="empty" id="oslist-note" style="display:none"></p>
     <div id="oslist-container" class="oslist"><div class="empty">Loading…</div></div>
     <p class="empty" id="oslist-empty" style="display:none">No OS matches that name.</p>
   </div>
@@ -281,8 +282,15 @@
   function render(q) {
     const box = document.getElementById("oslist-container");
     const empty = document.getElementById("oslist-empty");
+    const note = document.getElementById("oslist-note");
     const ql = q.toLowerCase();
-    const items = all.filter(o => o.name.toLowerCase().includes(ql));
+    let items = all.filter(o => o.name.toLowerCase().includes(ql));
+    note.style.display = "none";
+    if (!ql && items.length > 6) {
+      note.textContent = "Showing the first " + 6 + " of " + items.length + " OSes — type above to find more.";
+      note.style.display = "block";
+      items = items.slice(0, 6);
+    }
     empty.style.display = items.length ? "none" : "block";
     box.innerHTML = items.map(o => `
       <div class="oscard">
