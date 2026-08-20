@@ -83,7 +83,7 @@ Alpine Linux loads into RAM and the menu appears automatically. That's it.
 | No WiFi networks listed | Enable the wireless card in the computer's firmware (BIOS/UEFI). |
 | Text too small or too big | OSFinder picks a larger console font automatically based on your screen resolution. |
 
-See **USAGE.md** for the full step-by-step guide.
+See [**USAGE.md**](https://github.com/thdreams0/OSFinder/blob/733da91b2c60f41dca40a14c5eb3f85ed13c2f1c/USAGE.md) for the full step-by-step guide.
 
 ---
 
