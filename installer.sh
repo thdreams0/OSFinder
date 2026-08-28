@@ -3,7 +3,7 @@
 # Checks all components and ensures the project is ready to use
 # ASK USER TO SELECT TARGET USB DEVICE
 
-PROJECT_DIR="/home/andre/Projects/OSFinder"
+PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Root check: this script must be run with sudo/root privileges
 if [ "$(id -u)" -ne 0 ]; then
@@ -25,8 +25,8 @@ list_devices() {
             [ -b "$dev" ] && DEVICES="$DEVICES $(basename "$dev")"
         done
         if [ -z "$DEVICES" ]; then
-            echo "  /dev/sda (119,2G disk)"
-            echo "  /dev/nvme0n1 (931,5G disk)"
+            echo "  No devices detected. Plug in your USB and try again."
+            echo "  (expected examples: /dev/sda, /dev/sdb, /dev/nvme0n1)"
         else
             for d in $DEVICES; do echo "  $d"; done
         fi

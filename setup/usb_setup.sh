@@ -30,7 +30,7 @@ fi
 
 USB_DEVICE="$1"
 MOUNT_POINT="/tmp/osfinder_usb_mount"
-PROJECT_DIR="/home/andre/Projects/OSFinder"
+PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ALPINE_BASE="https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86_64/netboot"
 APKOVL_NAME="alpine.apkovl.tar.gz"
 
