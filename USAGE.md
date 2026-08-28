@@ -1,56 +1,47 @@
-# OSFinder - User Guide
+# osfinder - usage
 
-## What it is
+## join https://discord.gg/QEC6QttWMh for support
 
-OSFinder is a bootable tool that lets you search for, download and run operating
-system installers from any computer — even one with no OS installed. It runs from a
-USB pen: Alpine Linux loads into RAM and a text menu appears automatically.
+**what it is:** a bootable USB that lets you search, download and run OS installers from any machine - even one with no OS, no disk, no desktop. you boot Alpine Linux into RAM, get a text menu, and go.
 
-You don't need an existing operating system, a hard drive, or a graphics environment.
-Just the pen and an internet connection.
+you don't need an existing OS. just the pen and internet.
 
-## Part 1 - Creating the USB pen
+## part 1 - creating the pen
 
-You need: a Linux computer and a USB pen (2 GB or more).
+you need: a Linux PC and a USB pen (2GB+).
 
-### Create it from scratch
+### from scratch
 
-```bash
+```
 sudo bash installer.sh
 ```
 
-The installer lists the available disks, checks the project files, asks for
-confirmation and creates the bootable pen for you.
+it lists your disks (`lsblk`), validates `src/osfinder.sh`, `oslist.json`, `setup/usb_setup.sh`, checks `sh` + `curl` + `jq` + `tput`, asks for confirmation and builds the pen (FAT32, GRUB for BIOS+UEFI, Alpine).
 
-If you already know the device name, you can use the setup script directly:
+if you know the device already:
 
-```bash
+```
 sudo bash setup/usb_setup.sh /dev/sdX
 ```
 
-Replace `/dev/sdX` with your pen (e.g. `/dev/sdb`). **Warning**: everything on that
-device is erased.
+replace `/dev/sdX` (e.g. `/dev/sdb`). **warning:** wipes the whole device.
 
-### Update an existing pen
+### updating an existing pen
 
-Newer versions of OSFinder? Rebuild the pen without recreating it:
-
-```bash
+```
 sudo bash setup/fix_pen.sh /dev/sdX
 ```
 
-## Part 2 - Booting
+rebuilds boot files without starting over. also the fix if your SATA disk wasn't detected (injects `sd_mod`).
 
-1. Plug the pen into the computer.
-2. Restart and open the boot menu (usually **F8**, **F12**, **Del** or **F2**).
-3. Select the USB pen.
-4. In the GRUB menu, pick the OSFinder entry.
+## part 2 - booting
 
-Alpine Linux boots into RAM and the OSFinder menu appears on screen.
+1. plug the pen into the target PC
+2. restart, spam **F8 / F12 / Del / F2** to open boot menu
+3. select the USB pen
+4. in GRUB, pick OSFinder
 
-## Part 3 - Using the menu
-
-### Main menu
+Alpine boots into RAM, menu appears. if the pen doesn't show, try a rear USB port - front 3.0 ports are flaky on some boards.
 
 ```
 ========================================
@@ -65,27 +56,32 @@ Internet: Connected / OFF
   5. Power off
 ```
 
-The **Internet** status at the top shows whether you're connected
-(green = connected, red = off).
+`Internet: Connected` is green, `OFF` is red. that's your source of truth.
 
-### Getting online (automatic)
+## part 3 - using the menu
 
-If there's no internet, OSFinder tries ethernet (DHCP) first. If that fails, it opens
-the **WiFi wizard** so you can connect. If you skip it, you can always use option
-**2. Set up WiFi**.
+### getting online
 
-### Connecting to WiFi
+if there's no internet, osfinder tries ethernet first (`udhcpc` on every non-wifi iface). if that fails it opens the WiFi wizard automatically. you can also trigger it manually with `2`.
 
-1. OSFinder scans for available networks.
-2. Pick a network by its **number** (or type the name).
-3. Type the password (it stays hidden).
-4. Wrong password? Try again.
-5. The network is **saved on the pen** and reconnects automatically on later boots
-   when there's no ethernet.
+### WiFi setup
 
-### Searching and downloading an OS
+1. it scans (`iw dev <iface> scan`, parses `SSID:`)
+2. lists networks numbered:
+   ```
+     1. MyWifi
+     2. neighbor_wifi
+   ```
+3. type a number or type the name directly, `q` to go back
+4. type password (hidden with `stty -echo`)
+5. writes `/etc/wpa_supplicant/wpa_supplicant.conf`, starts `wpa_supplicant`, runs `udhcpc`
+6. on success it copies the conf to `<pen>/etc/wpa_supplicant.conf` and it auto-reconnects on next boot when there's no ethernet
 
-Choose option **1**. Then:
+wrong password? it tells you and lets you retry. no networks? check BIOS - wireless is often disabled there.
+
+### searching and downloading
+
+pick `1`:
 
 ```
 What do you want to install?
@@ -95,23 +91,20 @@ Press Enter with nothing typed to go back.
 Search> ubuntu
 ```
 
-- Search is by **name** and matches partial words: `ubu` finds Ubuntu, `cachy` finds CachyOS.
-- **Enter with an empty field** goes back to the menu.
-- Results appear as a numbered list:
+- search is partial and case-insensitive (`ubu` -> `Ubuntu-22.04`, `cachy` -> `CachyOS-260809`). it fetches `oslist.json` from `raw.githubusercontent.com` with a `cdn.jsdelivr.net` fallback, filters with `jq`.
+- empty input goes back, no crash.
+- results:
+  ```
+  Available results:
+  ---------------------
+    1. Ubuntu-22.04
+  ---------------------
+  Type the number to download
+  Select> 1
+  ```
+- type the number, it downloads to `/tmp/<name>.iso` with a real progress bar (background `curl` + `wc -c` polling, `show_progress` 50 chars wide).
 
-```
-Available results:
----------------------
-  1. Ubuntu-22.04
----------------------
-Type the number to download
-Select> 1
-```
-
-- Type the number and press Enter. The ISO downloads with a **progress bar** and is
-  stored in RAM (`/tmp`).
-
-### After the download
+### after download
 
 ```
 Download complete: /tmp/ubuntu-22.04.iso
@@ -122,17 +115,13 @@ What next?
   3. Search another OS
 ```
 
-- **1 — Mount the ISO and open the installer**: mounts the ISO and opens a shell.
-  Look for the installer inside (for example `./install*`, `casper`, `ubiquity` or
-  `calamares`) and run it. Type `exit` to return to OSFinder.
-- **2 — Copy the ISO to the pen**: saves the ISO onto the pen. On the next boot, the
-  GRUB menu shows an **"ISO: …"** entry for it — pick it and the ISO boots,
-  Ventoy-style, ready to install.
-- **3 — Search another OS**: start a new search.
+- `1` mount and open - `modprobe loop`, creates `/dev/loop*` if needed, `mount -o loop,ro /mnt/iso`, drops you to `sh` inside `/mnt/iso`. look for `install*`, `casper`, `ubiquity`, `calamares` and run it. `exit` returns to osfinder.
+- `2` copy to pen - finds pen by `/.boot_repository` marker, `mount -o remount,rw`, checks 4GB FAT32 limit, `cp` to pen root, regenerates GRUB (`gen_grub_cfg.sh` + `oslist.json`). next boot the ISO shows as `ISO: <name>` in GRUB - boots ventoy-style.
+- `3` search another - loop back.
 
-### Removing an ISO from the pen
+### removing an ISO from the pen
 
-Option **3** in the main menu lists the ISOs currently on the pen:
+pick `3` in main menu:
 
 ```
 Remove an ISO from the pen:
@@ -143,64 +132,58 @@ Type a number to remove it, or 'q' to go back.
 Select> 1
 ```
 
-- Type a number and confirm with `y` — the file is deleted and its **"ISO: …"**
-  entry is removed from the GRUB menu automatically.
-- **q** (or just Enter) goes back to the main menu.
+type number, confirm `y`, it `rm`s the file and regenerates `pen/boot/grub/grub.cfg` so the entry disappears. `q` or empty goes back. shows `There are no ISOs on the pen` if empty.
 
-### Shell (advanced users)
+### shell
 
-Option **4** opens a shell in the live Alpine environment. Useful for checking the
-network, disks, etc. Type `exit` to return to the menu.
+`4` opens `/bin/sh` in the live Alpine. check `ip route`, `lsblk`, `iw`, etc. `exit` to return.
 
-### Power off
+### power off
 
-Option **5** shuts down the computer.
+`5` does `poweroff -f`. that's it.
 
-## Requirements
+## requirements
 
-### To create the pen
-- A Linux computer with `sudo`
-- A USB pen with at least 2 GB
+**to create:**
+- Linux + `sudo`
+- 2GB+ pen
+- `sh`, `curl`, `jq`, `tput` (checked by `installer.sh`)
 
-### To boot and use it
-- A computer that boots from USB (BIOS legacy or UEFI)
-- An internet connection (WiFi or ethernet)
-- Enough RAM: ISOs are stored in RAM while downloading. For large ISOs, 8 GB is
-  comfortable and 16 GB is recommended.
+**to use:**
+- PC that boots from USB (BIOS or UEFI)
+- internet (ethernet or WiFi)
+- RAM: ISOs live in RAM. 8GB comfortable, 16GB for big ones. FAT32 limit: can't copy >4GB to pen, use mount instead.
 
-## Troubleshooting
+## troubleshooting
 
 ### "Could not mount the ISO"
-OSFinder tries to load the loop device automatically. If it still fails, use option
-**2. Copy the ISO to the USB pen** and boot from the pen instead.
+loop devices not available in this live session. osfinder tries `modprobe loop` and `mknod`, but if it still fails, use `2. Copy ISO to the pen` and boot it. more reliable.
 
-### No results on search
-- Check the name you typed matches a listed OS (search is partial, so short words work).
-- Check the internet status at the top of the menu.
+### no results
+- typo? try shorter term
+- check `Internet: OFF` at top - reconnect WiFi
 
-### Download fails
-- Check your internet connection (WiFi or ethernet).
-- Try again — sometimes mirrors are slow.
+### download fails
+- check connection, retry. `curl --max-time 14400`, but mirrors throttle.
+- `Internet went away` triggers auto `ensure_network` retry.
 
-### SATA / disk not detected at boot
-Run `sudo bash setup/fix_pen.sh /dev/sdX` on your Linux PC — this injects the SATA
-drivers (`sd_mod`/`scsi_mod`) into the boot files.
+### SATA/disk not detected
+run `sudo bash setup/fix_pen.sh /dev/sdX` - injects drivers into boot files.
 
-### No WiFi networks listed
-Some computers keep the wireless card disabled. Enable it in the firmware
-(BIOS/UEFI) and reboot.
+### no WiFi networks
+enable wireless in BIOS/UEFI. some laptops have a hardware switch too.
 
-### Text too small or too big
-OSFinder picks a larger console font automatically based on the monitor resolution.
-Nothing to configure.
+### text too small/big
+auto-handled. `set_console_font` reads `/sys/class/graphics/fb0/virtual_size` and picks `solar24x32` (1440p+), `sun12x22` (1080p), `Lat2-Terminus16` (720p+). needs `setfont`.
 
-## Good to know
+## good to know
 
-- The downloaded ISO goes to **RAM**, not to the pen — nothing is saved on the target
-  computer unless you choose "Copy the ISO to the pen".
-- WiFi works without ethernet.
-- Works on BIOS (legacy) and UEFI.
+- downloads go to RAM (`/tmp`), not to pen. nothing persists on target unless you copy to pen.
+- WiFi password is saved to pen and auto-used next boot when ethernet is absent.
+- works BIOS + UEFI.
+- ISOs on pen are listed by `ls pen/*.iso` and GRUB is regenerated to only show what's actually there.
+- list is public, no auth: `https://raw.githubusercontent.com/thdreams0/OSFinder/main/oslist.json`
 
 ---
 
-**OSFinder** - Download and install an OS on any bare-metal computer.
+**osfinder** - search for an .iso in our list and download it, without an OS on your computer.
