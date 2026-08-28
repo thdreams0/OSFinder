@@ -1,101 +1,88 @@
-# OSFinder
+# osfinder
 
-**Search for an .iso in our list and download it, without an OS on your computer.**
+search for an .iso in our list and download it, without an OS on your computer.
 
-A lightweight tool that turns any USB stick into a bootable "ISO finder": boot it on
-any computer — even one with no OS installed — and search, download and run
-operating system installers, using just a text menu.
+## join https://discord.gg/QEC6QttWMh for support
 
-No installation on the target computer. No need for an existing OS. Just the USB pen
-and an internet connection.
+**how it works:** you boot a tiny Alpine Linux from a USB stick. no OS needed on the target machine at all - it loads into RAM and gives you a text menu. you search by name (`ubuntu`, `cachyos`, `arch`), pick one, and it downloads the ISO straight to RAM with a progress bar. then you either mount it and run the installer right there, or copy it to the pen so it boots directly next time (ventoy-style).
 
-## What you get
+**status:** working on both BIOS (legacy) and UEFI. list is public (`oslist.json` on github, fetched via jsdelivr with raw fallback). downloads go to `/tmp` in RAM - nothing touches the target disk unless you tell it to.
 
-Boot the pen and you land in a simple menu:
+**important:** creating the pen **erases everything on it**. and ISOs are downloaded to RAM, so you need enough RAM - 8GB is comfortable, 16GB recommended for big ISOs. FAT32 pen can't hold files over 4GB, use mount option for those.
 
-```
-  1. Search and download an OS
-  2. Set up WiFi
-  3. Shell (for advanced users)
-  4. Power off
-```
+## setup
 
-- **Search** by typing part of an OS name (e.g. `ubuntu`, `cachyos`).
-- **Download** ISOs straight to the computer's RAM with a live progress bar.
-- **Mount** a downloaded ISO and open its installer immediately.
-- **WiFi** setup built in — works even without ethernet.
-- Works on both **BIOS (legacy)** and **UEFI** computers.
+no dependencies on the target machine - just a Linux PC to create the pen (needs `sudo`).
 
-## Quick start
+1. create the pen:
+   ```
+   sudo bash installer.sh
+   ```
+   it lists your disks, checks the project files, asks for confirmation, and builds the bootable pen. guided, hard to mess up.
 
-### 1. Create the USB pen (on any Linux PC)
+   if you already know the device:
+   ```
+   sudo bash setup/usb_setup.sh /dev/sdX
+   ```
+   replace `/dev/sdX` with your pen (e.g. `/dev/sdb`).
 
-```bash
-sudo bash installer.sh
-```
+2. already have a pen and want to update it:
+   ```
+   sudo bash setup/fix_pen.sh /dev/sdX
+   ```
+   also fixes the SATA driver issue if your disk isn't detected.
 
-The installer lists the available disks, checks the project, asks for confirmation
-and creates the bootable pen for you.
+3. boot the target machine:
+   - plug the pen, restart, spam **F8 / F12 / Del / F2** for boot menu
+   - select the USB pen, then pick OSFinder in GRUB
+   - Alpine loads into RAM and the menu shows up automatically
 
-If you already know the device name, you can use the setup script directly:
+that's it. no install, no existing OS.
 
-```bash
-sudo bash setup/usb_setup.sh /dev/sdX
-```
+## menu
 
-Replace `/dev/sdX` with your pen (e.g. `/dev/sdb`).
-**Warning**: all data on that device is erased.
+- `1` search and download an OS - type part of a name, pick a number, watch it download
+- `2` set up WiFi - scans, you pick a network, type password (saved to pen for next boot)
+- `3` remove an ISO from the USB pen - lists ISOs on the pen, pick one to delete (GRUB entry removed automatically)
+- `4` shell - drops you to sh in the live session (`exit` to return)
+- `5` power off
 
-Already have a pen? Update it with new versions of OSFinder:
+after a download you get:
+- `1` mount the ISO and open the installer - mounts at `/mnt/iso`, opens a shell, look for `install*`, `calamares`, `ubiquity`, etc.
+- `2` copy the ISO to the USB pen - saves to pen, shows as `ISO: ...` in GRUB on next boot
+- `3` search another OS
 
-```bash
-sudo bash setup/fix_pen.sh /dev/sdX
-```
+## requirements
 
-### 2. Boot the target computer
+**to create the pen:**
+- a Linux computer with `sudo`
+- a USB pen with at least 2GB
 
-1. Plug the pen in and restart.
-2. Open the boot menu (usually **F8**, **F12**, **Del** or **F2**).
-3. Select the USB pen.
-4. Pick the OSFinder entry in the GRUB menu.
+**to boot and use it:**
+- any PC that boots from USB (BIOS or UEFI)
+- internet (ethernet works automatically, or WiFi via option 2)
+- enough RAM for the ISO
 
-Alpine Linux loads into RAM and the menu appears automatically. That's it.
+## troubleshooting
 
-### 3. Use it
+**"Could not mount the ISO"** - live session loop devices are flaky. use `2. Copy ISO to the pen` and boot from it instead.
 
-- No internet? OSFinder tries ethernet, then guides you through **WiFi** setup.
-- Pick **1. Search and download an OS**, type part of a name, press Enter.
-- Pick a result by number. The ISO downloads with a progress bar.
-- After the download, choose what to do next:
-  1. **Mount the ISO and open the installer** — run the OS installer right away;
-  2. **Copy the ISO to the pen** — save it for later or for another machine;
-  3. **Search another OS**.
+**no results on search** - check your spelling (search is partial, `ubu` finds `ubuntu`), and check the `Internet: Connected / OFF` at the top.
 
-## Requirements
+**download fails** - check connection and try again, mirrors are slow sometimes.
 
-### To create the pen
-- A Linux computer with `sudo`
-- A USB pen with at least 2 GB
+**SATA disk not detected at boot** - run `sudo bash setup/fix_pen.sh /dev/sdX` from your Linux PC (injects `sd_mod`/`scsi_mod`).
 
-### To boot and use it (target computer)
-- A computer with BIOS or UEFI that boots from USB
-- Internet connection (WiFi or ethernet)
-- Enough RAM — ISOs are stored in RAM while downloading (8 GB is comfortable,
-  16 GB recommended for large ISOs)
+**no WiFi networks listed** - wireless card is probably disabled in BIOS/UEFI. enable it and reboot.
 
-## Troubleshooting
+**text too small/big** - it auto-picks a console font based on your screen resolution. nothing to configure.
 
-| Problem | Fix |
-|---|---|
-| "Could not mount the ISO" | Use option **2. Copy ISO to the pen** and boot from the pen instead. |
-| No results on search | Check the name matches a listed OS; check the internet status at the top. |
-| Download fails | Check your connection and try again. |
-| SATA disk not detected at boot | Run `sudo bash setup/fix_pen.sh /dev/sdX` (injects the SATA drivers). |
-| No WiFi networks listed | Enable the wireless card in the computer's firmware (BIOS/UEFI). |
-| Text too small or too big | OSFinder picks a larger console font automatically based on your screen resolution. |
+full step-by-step with all edge cases in [USAGE.md](USAGE.md).
 
-See [**USAGE.md**](https://github.com/thdreams0/OSFinder/blob/733da91b2c60f41dca40a14c5eb3f85ed13c2f1c/USAGE.md) for the full step-by-step guide.
+## disclaimer
 
----
+this just fetches public ISOs and mounts/copies them. it doesn't bypass anything, doesn't touch the target disk unless you run the installer or copy to pen. provided as-is with no warranty.
 
-Search for an .iso in our list and download it, without an OS on your computer.
+## license
+
+released under the MIT license. see [LICENSE](LICENSE).
