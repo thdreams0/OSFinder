@@ -1,6 +1,6 @@
 # osfinder - usage
 
-## join https://discord.gg/QEC6QttWMh for support
+
 
 **what it is:** a bootable USB that lets you search, download and run OS installers from any machine - even one with no OS, no disk, no desktop. you boot Alpine Linux into RAM, get a text menu, and go.
 

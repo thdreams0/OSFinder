@@ -2,7 +2,6 @@
 
 search for an .iso in our list and download it, without an OS on your computer.
 
-## join https://discord.gg/QEC6QttWMh for support
 
 **how it works:** you boot a tiny Alpine Linux from a USB stick. no OS needed on the target machine at all - it loads into RAM and gives you a text menu. you search by name (`ubuntu`, `cachyos`, `arch`), pick one, and it downloads the ISO straight to RAM with a progress bar. then you either mount it and run the installer right there, or copy it to the pen so it boots directly next time (ventoy-style).
 
