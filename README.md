@@ -2,11 +2,11 @@
 
 search for an .iso in our list and download it, without an OS on your computer.
 
-
+## join https://discord.gg/QEC6QttWMh for support
 
 **how it works:** you boot a tiny Alpine Linux from a USB stick. no OS needed on the target machine at all - it loads into RAM and gives you a text menu. you search by name, pick one, and it downloads the ISO straight to RAM. then you either mount it and run the installer right there, or copy it to the pen so it boots directly next time (ventoy-style).
 
-**status:** list is public (`oslist.json` on github, fetched via jsdelivr with raw fallback). downloads go to `/tmp` in RAM - nothing touches the target disk unless you tell it to. may break if Alpine netboot changes.
+**status:** verified working on BIOS (legacy) and UEFI. list is public (`oslist.json` on github, fetched via jsdelivr with raw fallback). downloads go to `/tmp` in RAM - nothing touches the target disk unless you tell it to. may break if Alpine netboot changes.
 
 **important:** creating the pen **erases everything on it**. ISOs are downloaded to RAM, so you need enough RAM - 8GB is comfortable, 16GB recommended for big ISOs. FAT32 pen can't hold files over 4GB, use mount option for those.
 
@@ -36,25 +36,44 @@ no dependencies on the target machine - the pen itself is the system. to *create
 
 ### windows
 
-I still didn't tested on windows but you can (if you have an windows pc).
-if you
+#### with WSL (recommended - BIOS+UEFI, same as Linux)
 
-1. run as Administrator:
+1. install WSL2 if you don't have it (once, then reboot):
+   ```
+   wsl --install
+   ```
+2. PowerShell **as Administrator**, in the project folder:
    ```
    powershell -ExecutionPolicy Bypass -File installer.ps1
    ```
-   it lists your disks, you pick the USB pen number, asks for confirmation.
+   it lists `Get-Disk`, you pick the USB number, confirm. it does `wsl --mount \\.\PhysicalDriveN --bare` and runs `setup/usb_setup.sh` inside WSL - full BIOS+UEFI pen.
 
-   - if **WSL** is installed (WSL2), it uses it automatically via `wsl --mount` and runs the same Linux installer inside WSL - you get full **BIOS+UEFI** support, same as Linux. this is the recommended path.
-   - if no WSL, it falls back to native PowerShell mode (`setup/usb_setup.ps1`) - **UEFI-only**. works on most modern PCs, but won't boot on old BIOS-only machines.
+#### without WSL (UEFI-only fallback - no extra install)
 
-   you can also run the native script directly:
+works on most modern PCs (UEFI). won't boot on old BIOS-only machines.
+
+1. PowerShell **as Administrator**:
    ```
-   powershell -ExecutionPolicy Bypass -File setup/usb_setup.ps1 -DiskNumber 1
+   Get-Disk
    ```
-   replace `1` with your USB disk number (see `Get-Disk`).
+   find your pen - e.g.:
+   ```
+   Number FriendlyName        Size BusType
+   ------ ------------        ---- -------
+   0      NVMe Samsung  476GB NVMe
+   1      USB SanDisk 3.2Gen1  29GB USB   <- this one
+   ```
+2. create the pen (replace `1` with your USB number):
+   ```
+   powershell -ExecutionPolicy Bypass -File setup\usb_setup.ps1 -DiskNumber 1
+   ```
+   or via installer (auto-falls back):
+   ```
+   powershell -ExecutionPolicy Bypass -File installer.ps1
+   ```
+   it does `diskpart clean / convert gpt / create partition efi / format FAT32` via `Invoke-WebRequest`, downloads `vmlinuz-lts` + `initramfs-lts` + `modloop-lts`, builds `alpine.apkovl.tar.gz` with `tar`, writes `boot/grub/grub.cfg` and tries to fetch `EFI\BOOT\BOOTX64.EFI`.
 
-2. no WSL and need BIOS? install WSL first (`wsl --install` then reboot) and re-run `installer.ps1`, or create the pen from a Linux PC/VM/live USB.
+3. need BIOS? run `wsl --install` + reboot, then re-run `installer.ps1`, or create from a Linux PC/VM/live USB.
 
 ### boot the target machine
    - plug the pen, restart, spam **F8 / F12 / Del / F2** for boot menu
@@ -81,11 +100,12 @@ after a download you get:
 **to create the pen:**
 - a Linux PC with `sudo` **or** a Windows 10/11 PC with Administrator (WSL recommended for full BIOS+UEFI, native PowerShell is UEFI-only)
 - a USB pen with at least 2GB
+- linux deps: `parted`, `dosfstools` (`mkfs.vfat`), `grub`, `curl` are required; `jq` + `oslist.json` are **optional** at install (pen still boots without them - list is fetched at runtime on the target)
 
 **to boot and use it:**
 - any PC that boots from USB (BIOS or UEFI - Windows native pen is UEFI-only)
 - internet (ethernet works automatically, or WiFi via option 2)
-- enough RAM for the ISO
+- enough RAM for the ISO (8GB comfortable, 16GB for big ISOs; FAT32 pen can't hold >4GB files)
 
 ## troubleshooting
 

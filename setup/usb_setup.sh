@@ -41,6 +41,48 @@ die() {
     exit 1
 }
 
+# --- dependency check (before touching the disk) - try auto-install if running as root ---
+missing=""
+for cmd in mkfs.vfat parted grub-install wipefs curl blockdev; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        if [ "$cmd" = "mkfs.vfat" ] && command -v mkfs.fat >/dev/null 2>&1; then
+            continue
+        fi
+        missing="$missing $cmd"
+    fi
+done
+if [ -n "$missing" ]; then
+    echo "Missing:$missing - trying auto-install..." >&2
+    if command -v pacman >/dev/null 2>&1; then
+        pacman -Sy --noconfirm dosfstools parted grub curl jq util-linux 2>&1 | tail -20 >&2
+    elif command -v apt-get >/dev/null 2>&1; then
+        apt-get update 2>&1 | tail -5 >&2
+        apt-get install -y dosfstools parted grub-pc grub-efi-amd64-bin curl jq 2>&1 | tail -20 >&2
+    elif command -v dnf >/dev/null 2>&1; then
+        dnf install -y dosfstools parted grub2-tools curl jq 2>&1 | tail -20 >&2
+    fi
+    # re-check
+    still_missing=""
+    for cmd in mkfs.vfat parted grub-install wipefs curl blockdev; do
+        if ! command -v "$cmd" >/dev/null 2>&1; then
+            if [ "$cmd" = "mkfs.vfat" ] && command -v mkfs.fat >/dev/null 2>&1; then continue; fi
+            still_missing="$still_missing $cmd"
+        fi
+    done
+    if [ -n "$still_missing" ]; then
+        echo "ERROR: still missing:$still_missing" >&2
+        echo "Install manually:" >&2
+        echo "  Arch: sudo pacman -S dosfstools parted grub curl jq" >&2
+        echo "  Debian/Ubuntu: sudo apt update && sudo apt install dosfstools parted grub-pc grub-efi-amd64-bin curl jq" >&2
+        exit 1
+    else
+        echo "Deps auto-installed. Continuing..." >&2
+    fi
+fi
+if ! command -v jq >/dev/null 2>&1; then
+    echo "WARNING: 'jq' not found - grub will be created without ISO entries (still bootable)." >&2
+fi
+
 # Helper: partition device path for a given partition number
 partition_path() {
     local dev="$1" num="$2" base

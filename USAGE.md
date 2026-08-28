@@ -1,5 +1,7 @@
 # osfinder - usage
 
+## join https://discord.gg/QEC6QttWMh for support
+
 **what it is:** a bootable USB that lets you search, download and run OS installers from any machine - even one with no OS, no disk, no desktop. you boot Alpine Linux into RAM, get a text menu, and go.
 
 you don't need an existing OS. just the pen and internet.
@@ -14,7 +16,7 @@ you need: a USB pen (2GB+) and either a Linux PC or a Windows 10/11 PC.
 sudo bash installer.sh
 ```
 
-it lists your disks (`lsblk`), validates `src/osfinder.sh`, `oslist.json`, `setup/usb_setup.sh`, checks `sh` + `curl` + `jq` + `tput`, asks for confirmation and builds the pen (FAT32, GRUB for BIOS+UEFI, Alpine).
+it lists your disks (`lsblk`), validates `src/osfinder.sh`, `setup/usb_setup.sh`, checks `sh` + `curl` + `tput` (and optionally `jq`/`oslist.json` - pen still boots without them, list is fetched at runtime), asks for confirmation and builds the pen (FAT32, GRUB for BIOS+UEFI, Alpine).
 
 if you know the device already:
 
@@ -26,24 +28,42 @@ replace `/dev/sdX` (e.g. `/dev/sdb`). **warning:** wipes the whole device.
 
 ### from scratch - windows
 
-no Linux? use Windows (needs Administrator):
+no Linux? use Windows 10/11 (needs Administrator):
+
+#### with WSL (recommended - BIOS+UEFI, same as Linux)
 
 ```
+wsl --install
+# reboot once
 powershell -ExecutionPolicy Bypass -File installer.ps1
 ```
 
-it lists your disks via `Get-Disk`, you pick the USB number, confirm. guided, hard to mess up.
+it lists your disks via `Get-Disk`, you pick the USB number, confirm. guided, hard to mess up. it mounts the USB into WSL via `wsl --mount \\.\PhysicalDriveN --bare` and runs the same `setup/usb_setup.sh` inside WSL - full BIOS+UEFI pen, identical to Linux.
 
-- **with WSL (recommended):** if `wsl --status` works, `installer.ps1` mounts the USB into WSL via `wsl --mount \\.\PhysicalDriveN --bare` and runs the same `setup/usb_setup.sh` inside WSL. you get full **BIOS+UEFI** pen, identical to Linux. needs WSL2 (run `wsl --install` and reboot if you don't have it).
-- **without WSL (fallback):** it runs `setup/usb_setup.ps1 -DiskNumber N` natively - creates a **UEFI-only** pen via `diskpart` (GPT + FAT32), downloads Alpine `vmlinuz-lts` / `initramfs-lts` / `modloop-lts` via `Invoke-WebRequest`, builds `alpine.apkovl.tar.gz` with `tar`, writes `boot/grub/grub.cfg` and tries to fetch `BOOTX64.EFI` for `EFI/BOOT/`. works on most modern PCs, but won't boot on old BIOS-only machines.
+#### without WSL (UEFI-only fallback - no extra install)
 
-you can call the native script directly:
+works on most modern PCs (UEFI). won't boot on old BIOS-only machines. no WSL needed - just PowerShell 5+.
 
-```
-powershell -ExecutionPolicy Bypass -File setup/usb_setup.ps1 -DiskNumber 1
-```
-
-replace `1` with your pen's disk number.
+1. PowerShell **as Administrator**:
+   ```
+   Get-Disk
+   ```
+   find your pen, e.g.:
+   ```
+   Number FriendlyName        Size BusType
+   ------ ------------        ---- -------
+   0      NVMe Samsung  476GB NVMe
+   1      USB SanDisk 3.2Gen1  29GB USB   <- this one
+   ```
+2. create the pen (replace `1` with your USB number):
+   ```
+   powershell -ExecutionPolicy Bypass -File setup\usb_setup.ps1 -DiskNumber 1
+   ```
+   or via installer (auto-falls back to UEFI-only):
+   ```
+   powershell -ExecutionPolicy Bypass -File installer.ps1
+   ```
+   what it does: `diskpart clean / convert gpt / create partition efi / format FAT32` (`setup/usb_setup.ps1:22`), downloads `vmlinuz-lts` / `initramfs-lts` / `modloop-lts` via `Invoke-WebRequest`, builds `alpine.apkovl.tar.gz` with `tar`, writes `boot/grub/grub.cfg` and tries to fetch `EFI\BOOT\BOOTX64.EFI`.
 
 ### updating an existing pen
 
@@ -168,7 +188,7 @@ type number, confirm `y`, it `rm`s the file and regenerates `pen/boot/grub/grub.
 **to create:**
 - Linux + `sudo` **or** Windows 10/11 + Administrator (WSL for BIOS+UEFI, native is UEFI-only)
 - 2GB+ pen
-- linux: `sh`, `curl`, `jq`, `tput` (checked by `installer.sh`) / windows: `PowerShell 5+`, `diskpart`, `Invoke-WebRequest`, `tar` + internet
+- linux: `sh`, `curl`, `tput` + `parted`, `dosfstools`, `grub` are required; `jq` + `oslist.json` are **optional** at install (checked by `installer.sh`, pen boots without them - list is fetched at runtime) / windows: `PowerShell 5+`, `diskpart`, `Invoke-WebRequest`, `tar` + internet
 
 **to use:**
 - PC that boots from USB (BIOS or UEFI - windows native pen is UEFI-only)

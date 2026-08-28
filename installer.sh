@@ -134,10 +134,14 @@ check_ok $TUI_OK "TUI script syntax check"
 # Check for required commands
 echo ""
 echo "--- Required Commands ---"
-command -v sh >/dev/null; check_ok $? "Bourne shell available"
-command -v curl >/dev/null; check_ok $? "curl for downloads available"
-command -v jq >/dev/null; check_ok $? "JSON processor available"
+command -v sh >/dev/null; SH_OK=$?; check_ok $SH_OK "Bourne shell available"
+command -v curl >/dev/null; CURL_OK=$?; check_ok $CURL_OK "curl for downloads available"
+command -v jq >/dev/null; JQ_OK=$?; check_ok $JQ_OK "JSON processor available (jq)"
 command -v tput >/dev/null; check_ok $? "Terminal handling available"
+command -v mkfs.vfat >/dev/null 2>&1 || command -v mkfs.fat >/dev/null 2>&1; FAT_OK=$?; check_ok $FAT_OK "mkfs.vfat (dosfstools) available"
+command -v parted >/dev/null; PARTED_OK=$?; check_ok $PARTED_OK "parted available"
+command -v grub-install >/dev/null; GRUB_OK=$?; check_ok $GRUB_OK "grub-install available"
+command -v wipefs >/dev/null; WIPEFS_OK=$?; check_ok $WIPEFS_OK "wipefs (util-linux) available"
 
 # ===========================================
 # 4. OS LIST VALIDATION (public JSON in this repo)
@@ -172,10 +176,30 @@ echo ""
 echo "Components:"
 DOCS_OK=1
 [ "$README_FILE" = "0" ] && [ "$USAGE_FILE" = "0" ] && DOCS_OK=0
+DEPS_OK=0
+[ "$FAT_OK" != "0" ] && DEPS_OK=1
+[ "$PARTED_OK" != "0" ] && DEPS_OK=1
+[ "$GRUB_OK" != "0" ] && DEPS_OK=1
+[ "$CURL_OK" != "0" ] && DEPS_OK=1
+# JQ/LIST are optional for USB creation - pen boots without them, TUI fetches list at runtime
 echo "  [1/4] TUI Script (src/osfinder.sh)          : $(print_ok "$TUI_OK" "Syntax valid, sh+curl+jq+tput required")"
-echo "  [2/4] OS List (oslist.json)                  : $(print_ok "$LIST_OK" "Public JSON list, valid")"
+echo "  [2/4] OS List (oslist.json)                  : $(print_ok "$LIST_OK" "Public JSON list, optional at install")"
 echo "  [3/4] USB Setup (setup/usb_setup.sh)       : $(print_ok "$USB_FILE" "Creates bootable USB with Alpine + GRUB")"
 echo "  [4/4] Documentation (README.md, USAGE.md)  : $(print_ok "$DOCS_OK" "Available for user reference")"
+if [ "$DEPS_OK" != "0" ] || [ "$TUI_OK" != "0" ]; then
+    echo ""
+    echo "  [!] Some checks FAILED - install will likely fail."
+    if [ "$FAT_OK" != "0" ]; then echo "      - missing mkfs.vfat: sudo pacman -S dosfstools  (or sudo apt install dosfstools)"; fi
+    if [ "$PARTED_OK" != "0" ]; then echo "      - missing parted: sudo pacman -S parted  (or sudo apt install parted)"; fi
+    if [ "$GRUB_OK" != "0" ]; then echo "      - missing grub: sudo pacman -S grub  (or sudo apt install grub-pc grub-efi-amd64)"; fi
+    if [ "$CURL_OK" != "0" ]; then echo "      - missing curl: sudo pacman -S curl"; fi
+fi
+if [ "$JQ_OK" != "0" ] || [ "$LIST_OK" != "0" ]; then
+    echo ""
+    echo "  [i] Optional: oslist/jq missing - USB will still be created (list is fetched at boot)."
+    if [ "$JQ_OK" != "0" ]; then echo "      - jq not found: sudo pacman -S jq (needed to validate oslist, ISO entries will be empty)"; fi
+    if [ "$LIST_OK" != "0" ]; then echo "      - oslist.json not valid/readable - will boot without pre-generated ISO entries"; fi
+fi
 echo ""
 echo "  The USB at $TARGET_DEV will be formatted as FAT32"
 echo "  and contain the OSFinder TUI system."
@@ -187,6 +211,55 @@ read -r key
 
 if [ "$key" = "q" ] || [ "$key" = "Q" ]; then
     echo "Operation cancelled by user."
+    exit 1
+fi
+
+if [ "$DEPS_OK" != "0" ]; then
+    echo ""
+    echo "Missing critical deps - trying to install automatically (running as root)..."
+    # try auto-install (no prompt) - best effort, falls back to manual message
+    if command -v pacman >/dev/null 2>&1; then
+        echo "  -> pacman -Sy --noconfirm dosfstools parted grub curl jq"
+        pacman -Sy --noconfirm dosfstools parted grub curl jq 2>&1 | tail -20
+    elif command -v apt >/dev/null 2>&1 || command -v apt-get >/dev/null 2>&1; then
+        echo "  -> apt update && apt install dosfstools parted grub-pc grub-efi-amd64-bin curl jq"
+        apt update 2>&1 | tail -5
+        apt install -y dosfstools parted grub-pc grub-efi-amd64-bin curl jq 2>&1 | tail -20
+    elif command -v dnf >/dev/null 2>&1; then
+        echo "  -> dnf install dosfstools parted grub2-tools curl jq"
+        dnf install -y dosfstools parted grub2-tools curl jq 2>&1 | tail -20
+    fi
+    # re-check
+    command -v mkfs.vfat >/dev/null 2>&1 || command -v mkfs.fat >/dev/null 2>&1; FAT_OK=$?
+    command -v parted >/dev/null; PARTED_OK=$?
+    command -v grub-install >/dev/null; GRUB_OK=$?
+    command -v curl >/dev/null; CURL_OK=$?
+    command -v jq >/dev/null; JQ_OK=$?
+    DEPS_OK=0
+    [ "$FAT_OK" != "0" ] && DEPS_OK=1
+    [ "$PARTED_OK" != "0" ] && DEPS_OK=1
+    [ "$GRUB_OK" != "0" ] && DEPS_OK=1
+    [ "$CURL_OK" != "0" ] && DEPS_OK=1
+    if [ "$DEPS_OK" != "0" ]; then
+        echo ""
+        echo "ERROR: Still missing deps. Install manually and re-run:"
+        echo "  Arch: sudo pacman -S dosfstools parted grub curl jq"
+        echo "  Debian/Ubuntu: sudo apt update && sudo apt install dosfstools parted grub-pc grub-efi-amd64-bin curl jq"
+        echo ""
+        echo "Aborting before touching the USB."
+        exit 1
+    else
+        echo "  [OK] Deps auto-installed. Continuing..."
+        # re-validate oslist now that jq may exist
+        if [ -f "$PROJECT_DIR/oslist.json" ]; then
+            LIST_COUNT=$(jq 'length' "$PROJECT_DIR/oslist.json" 2>/dev/null || echo "0")
+            if [ "$LIST_COUNT" -gt 0 ] 2>/dev/null; then LIST_OK=0; else LIST_OK=1; fi
+        fi
+    fi
+fi
+# oslist/jq is NOT required - TUI fetches it at runtime, grub will just have no ISO entries
+if [ "$TUI_OK" != "0" ]; then
+    echo "ERROR: TUI script has syntax errors. Fix src/osfinder.sh before installing."
     exit 1
 fi
 
