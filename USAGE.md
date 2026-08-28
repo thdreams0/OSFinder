@@ -1,16 +1,14 @@
 # osfinder - usage
 
-
-
 **what it is:** a bootable USB that lets you search, download and run OS installers from any machine - even one with no OS, no disk, no desktop. you boot Alpine Linux into RAM, get a text menu, and go.
 
 you don't need an existing OS. just the pen and internet.
 
 ## part 1 - creating the pen
 
-you need: a Linux PC and a USB pen (2GB+).
+you need: a USB pen (2GB+) and either a Linux PC or a Windows 10/11 PC.
 
-### from scratch
+### from scratch - linux
 
 ```
 sudo bash installer.sh
@@ -26,13 +24,36 @@ sudo bash setup/usb_setup.sh /dev/sdX
 
 replace `/dev/sdX` (e.g. `/dev/sdb`). **warning:** wipes the whole device.
 
+### from scratch - windows
+
+no Linux? use Windows (needs Administrator):
+
+```
+powershell -ExecutionPolicy Bypass -File installer.ps1
+```
+
+it lists your disks via `Get-Disk`, you pick the USB number, confirm. guided, hard to mess up.
+
+- **with WSL (recommended):** if `wsl --status` works, `installer.ps1` mounts the USB into WSL via `wsl --mount \\.\PhysicalDriveN --bare` and runs the same `setup/usb_setup.sh` inside WSL. you get full **BIOS+UEFI** pen, identical to Linux. needs WSL2 (run `wsl --install` and reboot if you don't have it).
+- **without WSL (fallback):** it runs `setup/usb_setup.ps1 -DiskNumber N` natively - creates a **UEFI-only** pen via `diskpart` (GPT + FAT32), downloads Alpine `vmlinuz-lts` / `initramfs-lts` / `modloop-lts` via `Invoke-WebRequest`, builds `alpine.apkovl.tar.gz` with `tar`, writes `boot/grub/grub.cfg` and tries to fetch `BOOTX64.EFI` for `EFI/BOOT/`. works on most modern PCs, but won't boot on old BIOS-only machines.
+
+you can call the native script directly:
+
+```
+powershell -ExecutionPolicy Bypass -File setup/usb_setup.ps1 -DiskNumber 1
+```
+
+replace `1` with your pen's disk number.
+
 ### updating an existing pen
 
+linux / wsl:
 ```
 sudo bash setup/fix_pen.sh /dev/sdX
 ```
+rebuilds boot files without starting over. also the fix if your SATA disk wasn't detected (injects `sd_mod` + `scsi_mod` and rebuilds `grub.cfg`).
 
-rebuilds boot files without starting over. also the fix if your SATA disk wasn't detected (injects `sd_mod`).
+windows native pen (UEFI-only) can't run `fix_pen.sh` - re-run `installer.ps1` with WSL for a full fix, or recreate on Linux.
 
 ## part 2 - booting
 
@@ -145,12 +166,12 @@ type number, confirm `y`, it `rm`s the file and regenerates `pen/boot/grub/grub.
 ## requirements
 
 **to create:**
-- Linux + `sudo`
+- Linux + `sudo` **or** Windows 10/11 + Administrator (WSL for BIOS+UEFI, native is UEFI-only)
 - 2GB+ pen
-- `sh`, `curl`, `jq`, `tput` (checked by `installer.sh`)
+- linux: `sh`, `curl`, `jq`, `tput` (checked by `installer.sh`) / windows: `PowerShell 5+`, `diskpart`, `Invoke-WebRequest`, `tar` + internet
 
 **to use:**
-- PC that boots from USB (BIOS or UEFI)
+- PC that boots from USB (BIOS or UEFI - windows native pen is UEFI-only)
 - internet (ethernet or WiFi)
 - RAM: ISOs live in RAM. 8GB comfortable, 16GB for big ones. FAT32 limit: can't copy >4GB to pen, use mount instead.
 
@@ -168,7 +189,7 @@ loop devices not available in this live session. osfinder tries `modprobe loop` 
 - `Internet went away` triggers auto `ensure_network` retry.
 
 ### SATA/disk not detected
-run `sudo bash setup/fix_pen.sh /dev/sdX` - injects drivers into boot files.
+run `sudo bash setup/fix_pen.sh /dev/sdX` from Linux or WSL - injects drivers into boot files. if you created the pen via native Windows (no WSL), re-create it via `installer.ps1` with WSL.
 
 ### no WiFi networks
 enable wireless in BIOS/UEFI. some laptops have a hardware switch too.

@@ -2,7 +2,7 @@
   {
     "name": "CachyOS-260809",
     "url": "https://cdn77.cachyos.org/ISO/desktop/260809/cachyos-desktop-linux-260809.iso",
-    "type": "arch"
+    "type": "cachyos"
   },
   {
     "name": "HirensBoot-pt-mirror",
@@ -24,5 +24,11 @@
     "name": "Fedora-KDE-Desktop-Live-44-1.7.x86_64",
     "url": "https://download.fedoraproject.org/pub/fedora/linux/releases/44/KDE/x86_64/iso/Fedora-KDE-Desktop-Live-44-1.7.x86_64.iso",
     "type": "fedora"
+  },
+  {
+    "name": "proxmox-ve_9.2-1",
+    "url": "https://enterprise.proxmox.com/iso/proxmox-ve_9.2-1.iso",
+    "type": "proxmox"
   }
 ]
+
